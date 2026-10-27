@@ -176,3 +176,17 @@ Nouvelle habitude : « Ne sait pas encore nager », pré-cochée à la création
 | Raquettes / ballon de plage | Suggestion, fusionnée avec « Ballon » des Loisirs |
 | Bouée, natte de plage | Nouvelles suggestions |
 | Maillot ×2, serviette, t-shirt anti-UV, parasol, seau/pelle/râteau, sac de plage | Inchangés |
+
+## Montagne (validé)
+
+Changement de fond : le moteur gagne une règle **« sauf si »** (ex. : gants si froid, sauf au ski).
+
+| Article | Décision |
+|---|---|
+| Combinaison / pantalon + blouson de ski | Fusionner en « Tenue de ski (pantalon + blouson ou combinaison) » ; bébé : « Combinaison de neige » |
+| Gants de ski ×2, chaussettes de ski, casque, masque de ski | Dès 3 ans |
+| Gants, bonnet (Vêtements) | Sauf au ski (remplacés par gants de ski et casque) |
+| Après-ski / bottes de neige | Tout le monde, bébé compris |
+| Bâtons de marche, luge | Suggestions |
+| Chaufferettes | Nouvelle suggestion (ski) |
+| Polaire, carte / appli de rando hors ligne, couverture de survie, porte-bébé de randonnée | Inchangés |
