@@ -64,3 +64,22 @@ Changement de fond : les besoins des petits passent par les **habitudes** plutô
 ## Liste de courses sur place (validé, dès la V1)
 
 Les articles faciles à trouver sur place (couches, lait, lingettes, crème solaire, gel douche…) sont marqués « achetable sur place ». Ils forment une liste de courses à l'arrivée au lieu d'aller dans la valise.
+
+Règle retenue : un article « achetable sur place » va dans la liste de courses **seulement si le trajet se fait en avion ou en train**. En voiture, il reste dans la valise. Un tap permet de basculer un article d'une liste à l'autre (« Je l'emporte » / « J'achète sur place »).
+
+## Toilette (validé)
+
+| Article | Décision |
+|---|---|
+| Brosse à dents | Tout le monde (bébés compris) |
+| Brosse / peigne | Une commune ; une perso si « Cheveux longs » |
+| Rasoir + mousse / après-rasage | Fusionner en une ligne |
+| Trousse de maquillage + démaquillant | Fusionner |
+| Lentilles + étui | Fusionner |
+| Protections périodiques | Inchangé ; achetable sur place |
+| Crème hydratante | Suggestion |
+| Baume à lèvres | Froid, ski, montagne seulement |
+| Dentifrice, après-shampoing, mouchoirs | Achetables sur place |
+| Gel douche, shampoing | Achetables sur place ; pas à l'hôtel |
+| Sèche-cheveux, cotons-tiges, pince à épiler | Suggestions |
+| Élastiques, déodorant, appareil dentaire, coupe-ongles, pochette 1 L, serviettes de toilette | Inchangés |
