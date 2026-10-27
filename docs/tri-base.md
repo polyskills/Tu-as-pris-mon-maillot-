@@ -162,3 +162,17 @@ Changements de fond :
 | Sacs de couchage, matelas + gonfleur, oreillers | Camping (tente), 1 par participant |
 | Sacs poubelle, papier toilette | Nouvelles suggestions (location) |
 | Sacs de courses, cadeau pour les hôtes | Inchangés |
+
+## Plage (validé)
+
+Nouvelle habitude : « Ne sait pas encore nager », pré-cochée à la création d'un profil de moins de 6 ans.
+
+| Article | Décision |
+|---|---|
+| Chaussures d'eau, pochette étanche | Suggestions |
+| Brassards / gilet de natation | Habitude « Ne sait pas encore nager » |
+| Couches de bain | Habitude « Couches » ; achetables sur place |
+| Masque + tuba + palmes | Fusionner |
+| Raquettes / ballon de plage | Suggestion, fusionnée avec « Ballon » des Loisirs |
+| Bouée, natte de plage | Nouvelles suggestions |
+| Maillot ×2, serviette, t-shirt anti-UV, parasol, seau/pelle/râteau, sac de plage | Inchangés |
