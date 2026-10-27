@@ -37,3 +37,30 @@ Décisions prises catégorie par catégorie, à appliquer dans `src/domain/catal
 | Bottes de pluie enfants | Nouvelle suggestion (campagne ou montagne, tempéré) |
 | Tenue de rechange enfant pour le trajet | À voir dans la catégorie Trajet |
 | Autres vêtements | Inchangés |
+
+## Bébé (validé)
+
+Changement de fond : les besoins des petits passent par les **habitudes** plutôt que par l'âge.
+- Nouvelles habitudes : « Biberon », « Repas bébé (petits pots) », « Allaitement ».
+- À la création d'un profil de moins de 3 ans : « Couches » et « Biberon » pré-cochées.
+
+| Article | Décision |
+|---|---|
+| Bodies | 1,5 par jour, 12 au maximum |
+| Tenues de jour | 1 par jour |
+| Chaussettes bébé | Au chaud : 1 pour 2 jours |
+| Couches, lingettes, crème pour le change, tapis à langer, sacs à couches | Liés à l'habitude « Couches » |
+| Biberons, lait | Liés à l'habitude « Biberon » |
+| Chauffe-biberon | Suggestion (habitude « Biberon ») |
+| Goupillon + liquide vaisselle biberons | Nouveau (habitude « Biberon ») |
+| Petits pots, bavoirs | Liés à l'habitude « Repas bébé » |
+| Doudou de secours | Nouvelle suggestion (habitude « Doudou ») |
+| Dosettes de sérum physiologique | Supprimer (doublon avec Santé) |
+| Thermomètre de bain, chaise haute nomade, babyphone, veilleuse | Suggestions |
+| Drap pour lit parapluie | Nouveau, avec le lit parapluie |
+| Siège auto / rehausseur | Suggestion « si location de voiture sur place » (bébé/enfant + avion ou train) |
+| Pyjamas, couches ×6/jour, tétine, doudou, mouche-bébé, porte-bébé, poussette, lit parapluie | Inchangés |
+
+## Liste de courses sur place (validé, dès la V1)
+
+Les articles faciles à trouver sur place (couches, lait, lingettes, crème solaire, gel douche…) sont marqués « achetable sur place ». Ils forment une liste de courses à l'arrivée au lieu d'aller dans la valise.
