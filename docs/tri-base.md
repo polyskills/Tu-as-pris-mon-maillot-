@@ -1,6 +1,8 @@
 # Tri de la base d'articles
 
-Décisions prises catégorie par catégorie, à appliquer dans `src/domain/catalogue.ts` une fois le tri terminé.
+Décisions prises catégorie par catégorie, **appliquées** dans `src/domain/catalogue.ts`.
+
+Effet mesuré sur Biarritz (4 personnes, 7 nuits, plage, voiture, location) : **185 → 135 lignes** dans la valise (+ 6 points de check-list voiture), **372 → 287 pièces**, affaires communes **60 → 40**.
 
 ## Changements de fond (validés)
 
