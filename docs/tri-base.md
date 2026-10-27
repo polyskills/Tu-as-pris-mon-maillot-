@@ -103,3 +103,18 @@ Nouvelle habitude : « Mal des transports » (par personne).
 | Crème apaisante piqûres, gel hydroalcoolique, bouchons d'oreilles, arnica | Suggestions |
 | Pansements ampoules | Nouvelle suggestion (randonnée) |
 | Traitement, antihistaminique, lunettes de soleil, trousse de secours, tire-tiques | Inchangés |
+
+## Électronique (validé)
+
+Habitude renommée : « Jeux vidéo » → « Jeux vidéo / tablette ».
+
+| Article | Décision |
+|---|---|
+| Téléphone | Supprimer (on l'a toujours sur soi) |
+| Écouteurs / casque | Si avion ou train ; suggestion sinon |
+| Tablette + chargeur | Habitude « Jeux vidéo / tablette » |
+| Batterie externe | Si avion, train ou randonnée ; suggestion sinon |
+| Adaptateur de prise | Hors Europe ; suggestion en Europe (Royaume-Uni, Irlande, Malte, Chypre, Suisse) |
+| Chargeur allume-cigare / CarPlay, enceinte Bluetooth | Suggestions |
+| Lampe frontale / torche | Camping ou randonnée ; suggestion sinon |
+| Chargeur de téléphone, console, liseuse, appareil photo, ordinateur, multiprise | Inchangés |
