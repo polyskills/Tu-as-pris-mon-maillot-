@@ -23,3 +23,17 @@ Décisions prises catégorie par catégorie, à appliquer dans `src/domain/catal
 | Espèces + devises | Fusionner en « Espèces / devises » |
 | Autorisation de sortie du territoire | Supprimer (inutile si l'enfant voyage avec un parent) |
 | Badge télépéage | Supprimer (→ suggestion) |
+
+## Vêtements (validé)
+
+| Article | Décision |
+|---|---|
+| Sous-vêtements | Adultes : 1 par jour. Enfants : 1 par jour + 2 |
+| Chaussettes | Au chaud : 1 pour 2 jours. Sinon 1 par jour |
+| T-shirts / hauts | Adultes : 1 par jour. Enfants : 1,5 par jour |
+| Pyjama | 2 (1 si 3 nuits ou moins) |
+| Pull / sweat | Chaud : 1. Tempéré : 2. Froid : 3 |
+| Ceinture | Suggestion |
+| Bottes de pluie enfants | Nouvelle suggestion (campagne ou montagne, tempéré) |
+| Tenue de rechange enfant pour le trajet | À voir dans la catégorie Trajet |
+| Autres vêtements | Inchangés |
