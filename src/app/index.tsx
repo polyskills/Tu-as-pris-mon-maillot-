@@ -32,7 +32,7 @@ export default function Accueil() {
   const passes = voyages.filter(estPasse).sort((a, b) => b.depart.localeCompare(a.depart));
 
   const carte = (v: Voyage) => {
-    const p = progression(v.articles);
+    const p = progression(v.articles.filter((a) => a.liste === 'valise'));
     const passe = estPasse(v);
     return (
       <Pressable key={v.id} onPress={() => router.push(`/voyage/${v.id}`)} style={[s.carte, passe && { opacity: 0.6 }]}>

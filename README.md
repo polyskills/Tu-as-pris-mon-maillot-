@@ -17,17 +17,19 @@ npm run lint
 | Dossier | Contenu |
 |---|---|
 | `src/domain/types.ts` | Modèle : profils, voyages, articles, conditions |
-| `src/domain/catalogue.ts` | Base d'articles (~190) et leurs règles « on prend X si… » |
-| `src/domain/generer.ts` | Moteur : génération, quantités, fusion après modification, progression |
+| `src/domain/catalogue.ts` | Base d'articles (214) et leurs règles « on prend X si… » : mis d'office, en suggestion, achetables sur place ou en check-list voiture |
+| `src/domain/generer.ts` | Moteur : génération, suggestions, quantités, fusion après modification, progression |
+| `docs/tri-base.md` | Décisions du tri de la base, catégorie par catégorie |
 | `src/store/` | État de l'appli (zustand), stocké en local (SQLite) |
 | `src/app/` | Écrans (Expo Router) : accueil, famille, profil, questionnaire voyage, valise |
 | `src/components/` | Composants d'interface communs |
 
 ## Règles du moteur
 
-- Une condition (`si`) liste des critères : tous doivent être vrais (ET). Dans un critère, une seule valeur suffit (OU). Un tableau de conditions = l'une ou l'autre.
+- Une condition (`si`) liste des critères : tous doivent être vrais (ET). Dans un critère, une seule valeur suffit (OU). Un tableau de conditions = l'une ou l'autre. `sauf` exclut un cas (ex. : gants si froid, sauf au ski).
 - Portée `personne` : un exemplaire par participant concerné (âge, habitudes). Portée `commun` : un seul pour le groupe, si au moins un participant est concerné.
-- Quantités `parJour` : calculées sur nuits + 1 jours, plafonnés à 7 avec une machine à laver.
+- Quantités `parJour` : calculées sur nuits + 1 jours, plafonnés à 7 avec une machine à laver (ratio réduit au chaud possible). Aussi `parClimat` et `parParticipant`.
+- Listes : valise ; courses sur place (articles achetables, en avion ou en train) ; check-list voiture (trajet en voiture).
 - Modifier un voyage ou un profil régénère la liste sans perdre le pointage, les quantités ajustées ni les ajouts manuels.
 
 ## Feuille de route

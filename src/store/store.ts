@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CATALOGUE } from '../domain/catalogue';
 import { fusionner, genererArticles } from '../domain/generer';
-import { ArticleVoyage, Categorie, ParametresVoyage, Profil, Statut, Voyage } from '../domain/types';
+import { ArticleVoyage, Categorie, Liste, ParametresVoyage, Profil, Statut, Voyage } from '../domain/types';
 import { stockage } from './stockage';
 
 export const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -20,7 +20,9 @@ interface Etat {
 
   changerStatut: (voyageId: string, articleId: string, statut: Statut) => void;
   changerQuantite: (voyageId: string, articleId: string, quantite: number) => void;
-  ajouterArticle: (voyageId: string, nom: string, categorie: Categorie, proprietaire: string) => void;
+  ajouterArticle: (voyageId: string, nom: string, categorie: Categorie, proprietaire: string, liste?: Liste) => void;
+  ajouterSuggestion: (voyageId: string, article: ArticleVoyage) => void;
+  changerListe: (voyageId: string, articleId: string, liste: Liste) => void;
   supprimerArticle: (voyageId: string, articleId: string) => void;
 }
 
@@ -28,6 +30,34 @@ const regenerer = (v: Voyage, profils: Profil[]): Voyage => ({
   ...v,
   articles: fusionner(v.articles, genererArticles(v, profils, CATALOGUE), v.participants),
 });
+
+// v1 : « étranger » oui/non, camping unique, pas de liste valise / courses / voiture.
+type VoyageV1 = Omit<Voyage, 'zone' | 'hebergement' | 'articles'> & {
+  etranger?: boolean;
+  hebergement: string;
+  articles: Omit<ArticleVoyage, 'liste'>[];
+};
+interface EtatV1 {
+  profils: Profil[];
+  voyages: VoyageV1[];
+}
+
+function migrerV1({ profils, voyages }: EtatV1) {
+  return {
+    profils,
+    voyages: voyages.map(({ etranger, ...v }) =>
+      regenerer(
+        {
+          ...v,
+          zone: etranger ? 'europe' : 'france',
+          hebergement: (v.hebergement === 'camping' ? 'tente' : v.hebergement) as Voyage['hebergement'],
+          articles: v.articles.map((a) => ({ ...a, liste: 'valise' as const })),
+        },
+        profils,
+      ),
+    ),
+  };
+}
 
 export const useStore = create<Etat>()(
   persist(
@@ -86,11 +116,27 @@ export const useStore = create<Etat>()(
         changerQuantite: (voyageId, articleId, quantite) =>
           majArticle(voyageId, articleId, { quantite: Math.max(1, quantite), ajuste: true }),
 
-        ajouterArticle: (voyageId, nom, categorie, proprietaire) =>
+        ajouterArticle: (voyageId, nom, categorie, proprietaire, liste = 'valise') =>
           majArticles(voyageId, (articles) => [
             ...articles,
-            { id: `ajout-${nouvelId()}`, nom, categorie, proprietaire, quantite: 1, statut: 'a-prendre', origine: 'ajout' },
+            {
+              id: `ajout-${nouvelId()}`,
+              nom,
+              categorie,
+              proprietaire,
+              quantite: 1,
+              statut: 'a-prendre',
+              liste,
+              origine: 'ajout',
+            },
           ]),
+
+        ajouterSuggestion: (voyageId, article) =>
+          majArticles(voyageId, (articles) =>
+            articles.some((a) => a.id === article.id) ? articles : [...articles, { ...article, origine: 'suggestion' }],
+          ),
+
+        changerListe: (voyageId, articleId, liste) => majArticle(voyageId, articleId, { liste, listeChoisie: true }),
 
         supprimerArticle: (voyageId, articleId) =>
           majArticles(voyageId, (articles) => articles.filter((a) => a.id !== articleId)),
@@ -98,8 +144,9 @@ export const useStore = create<Etat>()(
     },
     {
       name: 'maillot',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => stockage),
+      migrate: (ancien, version) => (version < 2 ? migrerV1(ancien as EtatV1) : ancien) as Etat,
     },
   ),
 );

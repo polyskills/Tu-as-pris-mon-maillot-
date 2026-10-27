@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
 import { Avatar, Bouton, Champ, ChoixPuces, couleurProfil, Saisie, useStyles } from '../../components/ui';
+import { habitudesParDefaut } from '../../domain/generer';
 import { CATEGORIES, HABITUDES } from '../../domain/libelles';
 import { ArticlePerso, Categorie, Habitude, Profil } from '../../domain/types';
 import { nouvelId, useStore } from '../../store/store';
@@ -34,6 +35,15 @@ export default function EditionProfil() {
   );
   const [annee, setAnnee] = useState(existant ? String(existant.anneeNaissance) : '');
   const [habitudes, setHabitudes] = useState<Habitude[]>(existant?.habitudes ?? []);
+  // Tant qu'on n'a pas touché aux habitudes d'un nouveau profil, l'âge les pré-coche.
+  const [habitudesTouchees, setHabitudesTouchees] = useState(!!existant);
+
+  const changerAnnee = (texte: string) => {
+    setAnnee(texte);
+    if (!habitudesTouchees && /^\d{4}$/.test(texte)) {
+      setHabitudes(habitudesParDefaut(Number(texte), new Date().getFullYear()));
+    }
+  };
   const [responsabilites, setResponsabilites] = useState<Categorie[]>(existant?.responsabilites ?? []);
   const [articlesPerso, setArticlesPerso] = useState<ArticlePerso[]>(existant?.articlesPerso ?? []);
   const [nouvelArticle, setNouvelArticle] = useState('');
@@ -106,11 +116,18 @@ export default function EditionProfil() {
       </Champ>
 
       <Champ libelle="Année de naissance" aide="Sert à calculer la tranche d'âge (bébé, enfant, ado…) à chaque voyage.">
-        <Saisie value={annee} onChangeText={setAnnee} placeholder="2018" keyboardType="number-pad" maxLength={4} />
+        <Saisie value={annee} onChangeText={changerAnnee} placeholder="2018" keyboardType="number-pad" maxLength={4} />
       </Champ>
 
       <Champ libelle="Habitudes et besoins">
-        <ChoixPuces options={HABITUDES} valeur={habitudes} onChange={setHabitudes} />
+        <ChoixPuces
+          options={HABITUDES}
+          valeur={habitudes}
+          onChange={(h) => {
+            setHabitudes(h);
+            setHabitudesTouchees(true);
+          }}
+        />
       </Champ>
 
       <Champ libelle="S'occupe des affaires communes" aide="Ex. : c'est elle qui gère les papiers et la trousse de secours.">

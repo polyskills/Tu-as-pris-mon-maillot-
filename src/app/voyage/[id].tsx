@@ -14,12 +14,24 @@ import {
   Saisie,
   useStyles,
 } from '../../components/ui';
-import { progression, responsable } from '../../domain/generer';
+import { CATALOGUE } from '../../domain/catalogue';
+import { genererSuggestions, progression, responsable } from '../../domain/generer';
 import { CATEGORIES } from '../../domain/libelles';
-import { ArticleVoyage, Categorie, COMMUN, Statut } from '../../domain/types';
+import { ArticleVoyage, Categorie, COMMUN, Liste, Statut } from '../../domain/types';
 import { useStore } from '../../store/store';
 
 const TOUT = 'tout';
+const COURSES = 'courses';
+const VOITURE = 'voiture';
+/** Onglets qui ne sont pas une personne : leur icône et leur nom. */
+const SPECIAUX: Record<string, [string, string]> = {
+  [TOUT]: ['🧳', 'Tout'],
+  [COMMUN]: ['🤝', 'Commun'],
+  [COURSES]: ['🛒', 'Courses'],
+  [VOITURE]: ['🚗', 'Voiture'],
+};
+/** Ce que veut dire « coché » selon la liste. */
+const FAIT: Record<Liste, string> = { valise: 'dans la valise', courses: 'acheté', voiture: 'vérifié' };
 const ORDRE_CATEGORIES = Object.keys(CATEGORIES) as Categorie[];
 const ORDRE_STATUT: Record<Statut, number> = { 'a-prendre': 0, 'dans-valise': 1, 'pas-besoin': 2 };
 const emoji = (c: Categorie) => CATEGORIES[c].split(' ')[0];
@@ -48,6 +60,8 @@ export default function Valise() {
   const profils = useStore((s) => s.profils);
   const changerStatut = useStore((s) => s.changerStatut);
   const changerQuantite = useStore((s) => s.changerQuantite);
+  const changerListe = useStore((s) => s.changerListe);
+  const ajouterSuggestion = useStore((s) => s.ajouterSuggestion);
   const supprimerArticle = useStore((s) => s.supprimerArticle);
 
   const c = useCouleurs();
@@ -56,6 +70,7 @@ export default function Valise() {
 
   const [onglet, setOnglet] = useState<string>(TOUT);
   const [masquerFaits, setMasquerFaits] = useState(false);
+  const [suggestionsOuvertes, setSuggestionsOuvertes] = useState(false);
   // Sections ouvertes ou fermées à la main. Sinon : une section terminée se replie.
   const [replis, setReplis] = useState<Record<string, boolean>>({});
   const [options, setOptions] = useState<string | null>(null);
@@ -79,53 +94,82 @@ export default function Valise() {
     return p ? couleurProfil(p, profils) : c.discret;
   };
 
-  const global = progression(articles);
+  const dansListe = (liste: Liste) => articles.filter((a) => a.liste === liste);
+  const valise = dansListe('valise');
+  const courses = dansListe('courses');
+  const checklist = dansListe('voiture');
+  const global = progression(valise);
   const proprietaires = [...voyage.participants, COMMUN];
-  const duProprietaire = (pid: string) => articles.filter((a) => a.proprietaire === pid);
+  const duProprietaire = (pid: string) => valise.filter((a) => a.proprietaire === pid);
+  const onglets = [
+    TOUT,
+    ...proprietaires,
+    ...(courses.length ? [COURSES] : []),
+    ...(checklist.length ? [VOITURE] : []),
+  ];
+  // Un onglet Courses ou Voiture vidé disparaît : on revient sur « Tout ».
+  const ongletActif = onglets.includes(onglet) ? onglet : TOUT;
+  const articlesDe = (o: string) =>
+    o === TOUT ? valise : o === COURSES ? courses : o === VOITURE ? checklist : duProprietaire(o);
+  const parCategorie = (liste: ArticleVoyage[], avecResponsable: boolean) =>
+    ORDRE_CATEGORIES.map((cat) => {
+      const resp = avecResponsable ? responsable(cat, profils, voyage.participants) : undefined;
+      return {
+        cle: cat,
+        titre: CATEGORIES[cat],
+        sousTitre: resp ? `gérés par ${resp.prenom}` : undefined,
+        data: liste.filter((a) => a.categorie === cat),
+      };
+    });
 
-  // Sections : par personne dans « Tout », par catégorie sinon.
+  // Sections : par personne dans « Tout », une seule pour la voiture, par catégorie sinon.
   const brutes: Omit<Section, 'faits' | 'total' | 'replie'>[] =
-    onglet === TOUT
+    ongletActif === TOUT
       ? proprietaires.map((pid) => ({
           cle: pid,
           titre: nomDe(pid),
           couleur: pid === COMMUN ? undefined : couleurDe(pid),
           data: duProprietaire(pid),
         }))
-      : ORDRE_CATEGORIES.map((cat) => {
-          const resp = onglet === COMMUN ? responsable(cat, profils, voyage.participants) : undefined;
-          return {
-            cle: cat,
-            titre: CATEGORIES[cat],
-            sousTitre: resp ? `gérés par ${resp.prenom}` : undefined,
-            data: duProprietaire(onglet).filter((a) => a.categorie === cat),
-          };
-        });
+      : ongletActif === VOITURE
+        ? [{ cle: VOITURE, titre: '🚗 Avant de partir', data: checklist }]
+        : parCategorie(articlesDe(ongletActif), ongletActif === COMMUN);
+
+  // Suggestions de l'onglet courant (aucune pour les courses et la voiture).
+  const suggestions =
+    ongletActif === COURSES || ongletActif === VOITURE
+      ? []
+      : genererSuggestions(voyage, profils, CATALOGUE, articles).filter(
+          (a) => ongletActif === TOUT || a.proprietaire === ongletActif,
+        );
+  const afficherProprietaire = ongletActif === TOUT || ongletActif === COURSES;
 
   const sections: Section[] = brutes
     .filter((b) => b.data.length > 0)
     .map((b) => {
       const p = progression(b.data);
-      const replie = replis[`${onglet}/${b.cle}`] ?? (p.total > 0 && p.restants === 0);
+      const replie = replis[`${ongletActif}/${b.cle}`] ?? (p.total > 0 && p.restants === 0);
       const visibles = trier(b.data).filter((a) => !masquerFaits || a.statut === 'a-prendre');
       return { ...b, faits: p.faits, total: p.total, replie, data: replie ? [] : visibles };
     });
 
   const basculerSection = (cle: string, actuellementReplie: boolean) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setReplis({ ...replis, [`${onglet}/${cle}`]: !actuellementReplie });
+    setReplis({ ...replis, [`${ongletActif}/${cle}`]: !actuellementReplie });
   };
 
   const pointer = (a: ArticleVoyage, statut: Statut) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     changerStatut(voyage.id, a.id, statut);
-    if (statut === 'dans-valise') {
+    if (statut === 'dans-valise' && a.liste === 'valise') {
       const restants = global.restants - (a.statut === 'a-prendre' ? 1 : 0);
       if (restants === 0) {
         vibrationSucces();
       } else {
         vibrationLegere();
       }
+    } else if (statut === 'dans-valise') {
+      vibrationLegere();
     }
     if (minuteur.current) clearTimeout(minuteur.current);
     setAnnulation({ article: a });
@@ -141,7 +185,7 @@ export default function Valise() {
 
   const libelleAnnulation = (a: ArticleVoyage) => {
     const actuel = articles.find((x) => x.id === a.id)?.statut;
-    const verbe = actuel === 'dans-valise' ? 'dans la valise' : actuel === 'pas-besoin' ? 'pas besoin' : 'à prendre';
+    const verbe = actuel === 'dans-valise' ? FAIT[a.liste] : actuel === 'pas-besoin' ? 'pas besoin' : 'à prendre';
     return `« ${a.nom} » ${verbe}`;
   };
 
@@ -176,20 +220,21 @@ export default function Valise() {
         <BarreProgression faits={global.faits} total={global.total} />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={l.onglets}>
-          {[TOUT, ...proprietaires].map((o) => {
-            const p = progression(o === TOUT ? articles : duProprietaire(o));
-            const actif = onglet === o;
+          {onglets.map((o) => {
+            const p = progression(articlesDe(o));
+            const actif = ongletActif === o;
+            const special = SPECIAUX[o];
             return (
               <Pressable key={o} onPress={() => setOnglet(o)} style={[l.onglet, actif && l.ongletActif]}>
-                {o === TOUT || o === COMMUN ? (
+                {special ? (
                   <View style={[l.pastille, { backgroundColor: actif ? c.accent : c.bordure }]}>
-                    <Text style={{ fontSize: 18 }}>{o === TOUT ? '🧳' : '🤝'}</Text>
+                    <Text style={{ fontSize: 18 }}>{special[0]}</Text>
                   </View>
                 ) : (
                   <Avatar prenom={nomDe(o)} couleur={couleurDe(o)} taille={40} fini={p.total > 0 && p.restants === 0} />
                 )}
                 <Text style={[l.ongletNom, actif && { color: c.accent }]} numberOfLines={1}>
-                  {o === TOUT ? 'Tout' : nomDe(o)}
+                  {special ? special[1] : nomDe(o)}
                 </Text>
                 <Text style={s.discret}>
                   {p.restants === 0 ? 'fini' : `${p.restants} restant${p.restants > 1 ? 's' : ''}`}
@@ -247,8 +292,11 @@ export default function Valise() {
               {a.statut === 'dans-valise' && <Text style={l.coche}>✓</Text>}
               {a.statut === 'pas-besoin' && <Text style={l.tiret}>–</Text>}
             </View>
-            {onglet === TOUT && <Text style={{ fontSize: 16 }}>{emoji(a.categorie)}</Text>}
-            <Text style={[s.texte, { flex: 1 }, a.statut !== 'a-prendre' && l.barre]}>{a.nom}</Text>
+            {ongletActif === TOUT && <Text style={{ fontSize: 16 }}>{emoji(a.categorie)}</Text>}
+            <View style={{ flex: 1 }}>
+              <Text style={[s.texte, a.statut !== 'a-prendre' && l.barre]}>{a.nom}</Text>
+              {ongletActif === COURSES && <Text style={s.discret}>{nomDe(a.proprietaire)}</Text>}
+            </View>
             {a.quantite > 1 && (
               <View style={l.quantite}>
                 <Text style={l.quantiteTexte}>×{a.quantite}</Text>
@@ -260,6 +308,41 @@ export default function Valise() {
           </Pressable>
         )}
         ListEmptyComponent={<Text style={s.vide}>Rien à afficher ici 👌</Text>}
+        ListFooterComponent={
+          suggestions.length > 0 ? (
+            <View style={{ marginTop: 16 }}>
+              <Pressable style={l.section} onPress={() => setSuggestionsOuvertes(!suggestionsOuvertes)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={l.sectionTitre}>💡 Suggestions</Text>
+                  <Text style={s.discret}>Pas mis d’office : ajoute ce qui te sert d’un tap.</Text>
+                </View>
+                <Text style={s.discret}>{suggestions.length}</Text>
+                <Text style={l.chevron}>{suggestionsOuvertes ? '⌄' : '›'}</Text>
+              </Pressable>
+              {suggestionsOuvertes &&
+                suggestions.map((sug) => (
+                  <View key={sug.id} style={l.ligne}>
+                    <Text style={{ fontSize: 16 }}>{emoji(sug.categorie)}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.texte}>{sug.nom}</Text>
+                      {afficherProprietaire && <Text style={s.discret}>{nomDe(sug.proprietaire)}</Text>}
+                    </View>
+                    <Pressable
+                      hitSlop={8}
+                      style={l.boutonAjout}
+                      onPress={() => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        ajouterSuggestion(voyage.id, sug);
+                        vibrationLegere();
+                      }}
+                    >
+                      <Text style={l.boutonAjoutTexte}>+ Ajouter</Text>
+                    </Pressable>
+                  </View>
+                ))}
+            </View>
+          ) : undefined
+        }
       />
 
       {annulation ? (
@@ -286,6 +369,10 @@ export default function Valise() {
           setOptions(null);
         }}
         changerQuantite={(q) => choisi && changerQuantite(voyage.id, choisi.id, q)}
+        changerListe={(liste) => {
+          if (choisi) changerListe(voyage.id, choisi.id, liste);
+          setOptions(null);
+        }}
         supprimer={() => {
           if (choisi) supprimerArticle(voyage.id, choisi.id);
           setOptions(null);
@@ -298,7 +385,8 @@ export default function Valise() {
           fermer={() => setAjoutOuvert(false)}
           voyageId={voyage.id}
           proprietaires={Object.fromEntries(proprietaires.map((p) => [p, nomDe(p)]))}
-          proprietaireParDefaut={onglet === TOUT ? COMMUN : onglet}
+          proprietaireParDefaut={SPECIAUX[ongletActif] ? COMMUN : ongletActif}
+          liste={ongletActif === COURSES ? 'courses' : ongletActif === VOITURE ? 'voiture' : 'valise'}
         />
       )}
     </View>
@@ -311,6 +399,7 @@ function FeuilleOptions({
   fermer,
   pointer,
   changerQuantite,
+  changerListe,
   supprimer,
 }: {
   article?: ArticleVoyage;
@@ -318,6 +407,7 @@ function FeuilleOptions({
   fermer: () => void;
   pointer: (s: Statut) => void;
   changerQuantite: (q: number) => void;
+  changerListe: (l: Liste) => void;
   supprimer: () => void;
 }) {
   const s = useStyles();
@@ -336,10 +426,25 @@ function FeuilleOptions({
               <Text style={s.libelle}>Quantité</Text>
               <Compteur valeur={article.quantite} min={1} onChange={changerQuantite} />
             </View>
-            <Bouton titre="✓ Dans la valise" onPress={() => pointer('dans-valise')} />
-            <Bouton titre="À prendre" variante="contour" onPress={() => pointer('a-prendre')} />
+            <Bouton
+              titre={`✓ ${FAIT[article.liste][0].toUpperCase()}${FAIT[article.liste].slice(1)}`}
+              onPress={() => pointer('dans-valise')}
+            />
+            <Bouton
+              titre={
+                article.liste === 'courses' ? 'À acheter' : article.liste === 'voiture' ? 'À vérifier' : 'À prendre'
+              }
+              variante="contour"
+              onPress={() => pointer('a-prendre')}
+            />
             <Bouton titre="Pas besoin cette fois" variante="contour" onPress={() => pointer('pas-besoin')} />
-            {article.origine === 'ajout' && (
+            {article.liste === 'valise' && (
+              <Bouton titre="🛒 J’achète sur place" variante="contour" onPress={() => changerListe('courses')} />
+            )}
+            {article.liste === 'courses' && (
+              <Bouton titre="🧳 Je l’emporte" variante="contour" onPress={() => changerListe('valise')} />
+            )}
+            {(article.origine === 'ajout' || article.origine === 'suggestion') && (
               <Bouton titre="Supprimer l'article" variante="danger" onPress={supprimer} />
             )}
           </Pressable>
@@ -354,11 +459,13 @@ function FeuilleAjout({
   voyageId,
   proprietaires,
   proprietaireParDefaut,
+  liste,
 }: {
   fermer: () => void;
   voyageId: string;
   proprietaires: Record<string, string>;
   proprietaireParDefaut: string;
+  liste: Liste;
 }) {
   const s = useStyles();
   const l = useStylesLocaux();
@@ -369,7 +476,7 @@ function FeuilleAjout({
 
   const valider = () => {
     if (!nom.trim()) return;
-    ajouterArticle(voyageId, nom.trim(), categorie, proprietaire);
+    ajouterArticle(voyageId, nom.trim(), categorie, proprietaire, liste);
     setNom('');
     fermer();
   };
@@ -379,7 +486,13 @@ function FeuilleAjout({
       <Pressable style={l.voile} onPress={fermer}>
         <Pressable style={l.feuille}>
           <View style={l.poignee} />
-          <Text style={s.titre}>Ajouter un article</Text>
+          <Text style={s.titre}>
+            {liste === 'courses'
+              ? 'Ajouter aux courses'
+              : liste === 'voiture'
+                ? 'Ajouter à la check-list'
+                : 'Ajouter un article'}
+          </Text>
           <Saisie
             value={nom}
             onChangeText={setNom}
@@ -500,5 +613,7 @@ const useStylesLocaux = creerStyles((c) => ({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
+  boutonAjout: { borderWidth: 1, borderColor: c.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  boutonAjoutTexte: { color: c.accent, fontWeight: '600', fontSize: 14 },
   poignee: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: c.bordure, marginBottom: 4 },
 }));

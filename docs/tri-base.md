@@ -190,3 +190,14 @@ Changement de fond : le moteur gagne une règle **« sauf si »** (ex. : gants s
 | Bâtons de marche, luge | Suggestions |
 | Chaufferettes | Nouvelle suggestion (ski) |
 | Polaire, carte / appli de rando hors ligne, couverture de survie, porte-bébé de randonnée | Inchangés |
+
+## Loisirs (validé)
+
+| Article | Décision |
+|---|---|
+| Le maillot de son équipe | Supprimé (article perso du profil) |
+| Antivol + kit de réparation vélo | Fusionner ; « Porte-vélos fixé » dans la check-list voiture |
+| Jumelles | Suggestion |
+| Ballon | Suggestion, fusionnée avec « Raquettes / ballon de plage » |
+| Carte de pêche (eau douce) | Nouvelle suggestion dans les Papiers |
+| Jouets, casque de vélo, tenue de sport, matériel de pêche, jeux de société | Inchangés |

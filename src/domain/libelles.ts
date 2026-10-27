@@ -1,4 +1,4 @@
-import { Activite, Categorie, Climat, Destination, Habitude, Hebergement, TrancheAge, Transport } from './types';
+import { Activite, Categorie, Climat, Destination, Habitude, Hebergement, TrancheAge, Transport, Zone } from './types';
 
 // Libellés affichés à l'écran, dans l'ordre où on les propose.
 
@@ -16,6 +16,12 @@ export const CLIMATS: Record<Climat, string> = {
   froid: '❄️ Froid',
 };
 
+export const ZONES: Record<Zone, string> = {
+  france: '🇫🇷 France',
+  europe: '🇪🇺 Europe',
+  'hors-europe': '🌍 Hors Europe',
+};
+
 export const TRANSPORTS: Record<Transport, string> = {
   voiture: '🚗 Voiture',
   avion: '✈️ Avion',
@@ -26,7 +32,8 @@ export const TRANSPORTS: Record<Transport, string> = {
 export const HEBERGEMENTS: Record<Hebergement, string> = {
   hotel: '🏨 Hôtel',
   location: '🏠 Location',
-  camping: '⛺ Camping',
+  'mobil-home': '🚐 Mobil-home',
+  tente: '⛺ Camping (tente)',
   famille: '👵 Famille / amis',
 };
 
@@ -46,17 +53,22 @@ export const HABITUDES: Record<Habitude, string> = {
   lentilles: 'Lentilles',
   traitement: 'Traitement médical',
   allergies: 'Allergies',
+  'mal-transports': 'Mal des transports',
   rasage: 'Rasage',
   maquillage: 'Maquillage',
   protections: 'Protections périodiques',
   'cheveux-longs': 'Cheveux longs',
   'appareil-dentaire': 'Appareil dentaire',
   couches: 'Couches',
+  biberon: 'Biberon',
+  'repas-bebe': 'Repas bébé (petits pots)',
+  allaitement: 'Allaitement',
   tetine: 'Tétine',
   doudou: 'Doudou',
+  'ne-nage-pas': 'Ne sait pas encore nager',
   lecture: 'Lecture',
   photo: 'Photo',
-  'jeux-video': 'Jeux vidéo',
+  'jeux-video': 'Jeux vidéo / tablette',
 };
 
 export const CATEGORIES: Record<Categorie, string> = {

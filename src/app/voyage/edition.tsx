@@ -17,7 +17,7 @@ import {
 } from '../../components/ui';
 import { CATALOGUE } from '../../domain/catalogue';
 import { genererArticles } from '../../domain/generer';
-import { ACTIVITES, CLIMATS, DESTINATIONS, HEBERGEMENTS, TRANSPORTS } from '../../domain/libelles';
+import { ACTIVITES, CLIMATS, DESTINATIONS, HEBERGEMENTS, TRANSPORTS, ZONES } from '../../domain/libelles';
 import { ParametresVoyage, Voyage } from '../../domain/types';
 import { useStore } from '../../store/store';
 
@@ -48,7 +48,7 @@ export default function EditionVoyage() {
           nuits: 7,
           destinations: [],
           climat: 'tempere',
-          etranger: false,
+          zone: 'france',
           transports: ['voiture'],
           hebergement: 'location',
           machineALaver: false,
@@ -97,7 +97,12 @@ export default function EditionVoyage() {
     contenu = (
       <>
         <Champ libelle="Nom du voyage">
-          <Saisie value={p.nom} onChangeText={(t) => maj('nom', t)} placeholder="Ex. : Biarritz juillet" autoFocus={!existant} />
+          <Saisie
+            value={p.nom}
+            onChangeText={(t) => maj('nom', t)}
+            placeholder="Ex. : Biarritz juillet"
+            autoFocus={!existant}
+          />
         </Champ>
         <Champ libelle="Type de destination" aide="Plusieurs choix possibles.">
           <ChoixPuces options={DESTINATIONS} valeur={p.destinations} onChange={(v) => maj('destinations', v)} />
@@ -105,12 +110,9 @@ export default function EditionVoyage() {
         <Champ libelle="Climat attendu">
           <ChoixUnique options={CLIMATS} valeur={p.climat} onChange={(v) => maj('climat', v)} />
         </Champ>
-        <Interrupteur
-          libelle="À l'étranger"
-          aide="Ajoute passeports, adaptateur, devises…"
-          valeur={p.etranger}
-          onChange={(v) => maj('etranger', v)}
-        />
+        <Champ libelle="Pays" aide="Hors de France : papiers, carte européenne d'assurance maladie, adaptateur…">
+          <ChoixUnique options={ZONES} valeur={p.zone} onChange={(v) => maj('zone', v)} />
+        </Champ>
       </>
     );
   } else if (etape === 1) {
@@ -175,10 +177,14 @@ export default function EditionVoyage() {
     const noms = profils.filter((x) => p.participants.includes(x.id)).map((x) => x.prenom);
     const lignes: [string, string, number][] = [
       ['Voyage', p.nom || '—', 0],
-      ['Destination', `${liste(p.destinations, DESTINATIONS)} · ${CLIMATS[p.climat]}${p.etranger ? ' · étranger' : ''}`, 0],
+      ['Destination', `${liste(p.destinations, DESTINATIONS)} · ${CLIMATS[p.climat]} · ${ZONES[p.zone]}`, 0],
       ['Dates', `${dateLongue(p.depart)} · ${p.nuits} nuit${p.nuits > 1 ? 's' : ''}`, 1],
       ['Participants', noms.join(', ') || '—', 2],
-      ['Trajet et séjour', `${liste(p.transports, TRANSPORTS)} · ${HEBERGEMENTS[p.hebergement]}${p.machineALaver ? ' · machine à laver' : ''}`, 3],
+      [
+        'Trajet et séjour',
+        `${liste(p.transports, TRANSPORTS)} · ${HEBERGEMENTS[p.hebergement]}${p.machineALaver ? ' · machine à laver' : ''}`,
+        3,
+      ],
       ['Activités', liste(p.activites, ACTIVITES), 3],
     ];
     contenu = (
@@ -195,7 +201,20 @@ export default function EditionVoyage() {
           ))}
         </View>
         <View style={l.apercu}>
-          <Text style={[s.titre, { color: c.texte }]}>{apercu.length} articles</Text>
+          <Text style={[s.titre, { color: c.texte }]}>
+            {apercu.filter((x) => x.liste === 'valise').length} articles dans la valise
+          </Text>
+          {apercu.some((x) => x.liste !== 'valise') && (
+            <Text style={s.texte}>
+              {[
+                [apercu.filter((x) => x.liste === 'courses').length, 'à acheter sur place'],
+                [apercu.filter((x) => x.liste === 'voiture').length, 'points de check-list voiture'],
+              ]
+                .filter(([n]) => n)
+                .map(([n, t]) => `${n} ${t}`)
+                .join(' · ')}
+            </Text>
+          )}
           <Text style={s.discret}>
             {existant ? 'Ce qui est déjà pointé sera conservé.' : 'Tu pourras retirer ou ajouter des articles ensuite.'}
           </Text>
@@ -240,7 +259,9 @@ export default function EditionVoyage() {
       </ScrollView>
 
       <View style={l.pied}>
-        {etape > 0 && <Bouton titre="Précédent" variante="contour" onPress={() => setEtape(etape - 1)} style={{ flex: 1 }} />}
+        {etape > 0 && (
+          <Bouton titre="Précédent" variante="contour" onPress={() => setEtape(etape - 1)} style={{ flex: 1 }} />
+        )}
         <Bouton
           titre={etape < ETAPES.length - 1 ? 'Suivant' : existant ? 'Mettre à jour la liste' : 'Générer la liste'}
           onPress={suivant}
