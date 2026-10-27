@@ -1,4 +1,4 @@
-import { Activite, Categorie, Climat, Destination, Habitude, Hebergement, Transport } from './types';
+import { Activite, Categorie, Climat, Destination, Habitude, Hebergement, TrancheAge, Transport } from './types';
 
 // Libellés affichés à l'écran, dans l'ordre où on les propose.
 
@@ -71,6 +71,14 @@ export const CATEGORIES: Record<Categorie, string> = {
   plage: '🏖️ Plage',
   montagne: '⛰️ Montagne',
   loisirs: '🎲 Loisirs',
+};
+
+export const TRANCHES: Record<TrancheAge, string> = {
+  bebe: 'Bébé',
+  enfant: 'Enfant',
+  ado: 'Ado',
+  adulte: 'Adulte',
+  senior: 'Senior',
 };
 
 export const cles = <K extends string>(r: Record<K, string>) => Object.keys(r) as K[];

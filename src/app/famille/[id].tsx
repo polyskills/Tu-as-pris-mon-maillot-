@@ -1,13 +1,14 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { Bouton, Champ, ChoixPuces, couleurs, Saisie, styles } from '../../components/ui';
+import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
+import { Avatar, Bouton, Champ, ChoixPuces, couleurProfil, Saisie, useStyles } from '../../components/ui';
 import { CATEGORIES, HABITUDES } from '../../domain/libelles';
 import { ArticlePerso, Categorie, Habitude, Profil } from '../../domain/types';
 import { nouvelId, useStore } from '../../store/store';
 
 // Catégories qu'on peut confier à quelqu'un pour les affaires communes.
-const RESPONSABILITES: Partial<Record<Categorie, string>> = {
+const RESPONSABILITES = {
   papiers: CATEGORIES.papiers,
   sante: CATEGORIES.sante,
   electronique: CATEGORIES.electronique,
@@ -16,15 +17,21 @@ const RESPONSABILITES: Partial<Record<Categorie, string>> = {
   voyage: CATEGORIES.voyage,
   maison: CATEGORIES.maison,
   loisirs: CATEGORIES.loisirs,
-};
+} as Record<Categorie, string>;
 
 export default function EditionProfil() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const existant = useStore((s) => s.profils.find((p) => p.id === id));
+  const profils = useStore((s) => s.profils);
+  const existant = profils.find((p) => p.id === id);
   const enregistrer = useStore((s) => s.enregistrerProfil);
   const supprimer = useStore((s) => s.supprimerProfil);
+  const c = useCouleurs();
+  const s = useStyles();
 
   const [prenom, setPrenom] = useState(existant?.prenom ?? '');
+  const [couleur, setCouleur] = useState(
+    existant ? couleurProfil(existant, profils) : COULEURS_PROFIL[profils.length % COULEURS_PROFIL.length],
+  );
   const [annee, setAnnee] = useState(existant ? String(existant.anneeNaissance) : '');
   const [habitudes, setHabitudes] = useState<Habitude[]>(existant?.habitudes ?? []);
   const [responsabilites, setResponsabilites] = useState<Categorie[]>(existant?.responsabilites ?? []);
@@ -39,6 +46,7 @@ export default function EditionProfil() {
     const profil: Profil = {
       id: existant?.id ?? nouvelId(),
       prenom: prenom.trim(),
+      couleur,
       anneeNaissance: anneeNum,
       habitudes,
       responsabilites,
@@ -69,8 +77,29 @@ export default function EditionProfil() {
     ]);
 
   return (
-    <ScrollView style={styles.ecran} contentContainerStyle={styles.contenu} keyboardShouldPersistTaps="handled">
+    <ScrollView style={s.ecran} contentContainerStyle={[s.contenu, { gap: 20 }]} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: existant ? existant.prenom : 'Nouvelle personne' }} />
+
+      <View style={{ alignItems: 'center', gap: 12 }}>
+        <Avatar prenom={prenom || '?'} couleur={couleur} taille={72} />
+        <View style={[s.ligne, { gap: 8 }]}>
+          {COULEURS_PROFIL.map((k) => (
+            <Pressable
+              key={k}
+              onPress={() => setCouleur(k)}
+              hitSlop={4}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: k,
+                borderWidth: 3,
+                borderColor: k === couleur ? c.texte : 'transparent',
+              }}
+            />
+          ))}
+        </View>
+      </View>
 
       <Champ libelle="Prénom">
         <Saisie value={prenom} onChangeText={setPrenom} placeholder="Léa" autoFocus={!existant} />
@@ -85,15 +114,15 @@ export default function EditionProfil() {
       </Champ>
 
       <Champ libelle="S'occupe des affaires communes" aide="Ex. : c'est elle qui gère les papiers et la trousse de secours.">
-        <ChoixPuces options={RESPONSABILITES as Record<Categorie, string>} valeur={responsabilites} onChange={setResponsabilites} />
+        <ChoixPuces options={RESPONSABILITES} valeur={responsabilites} onChange={setResponsabilites} />
       </Champ>
 
       <Champ libelle="Toujours dans sa valise" aide="Ce que cette personne emporte à chaque fois, en plus de la base.">
         {articlesPerso.map((a) => (
-          <View key={a.id} style={[styles.interrupteur, { paddingVertical: 4 }]}>
-            <Text style={styles.texte}>{a.nom}</Text>
+          <View key={a.id} style={[s.ligneEspacee, { paddingVertical: 4 }]}>
+            <Text style={s.texte}>{a.nom}</Text>
             <Pressable hitSlop={8} onPress={() => setArticlesPerso(articlesPerso.filter((x) => x.id !== a.id))}>
-              <Text style={{ color: couleurs.danger }}>Retirer</Text>
+              <Text style={{ color: c.danger }}>Retirer</Text>
             </Pressable>
           </View>
         ))}

@@ -9,6 +9,7 @@ npm install
 npx expo start      # puis scanner le QR code avec l'appli Expo Go
 npm test            # tests du moteur de règles
 npm run typecheck
+npm run lint
 ```
 
 ## Organisation du code

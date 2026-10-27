@@ -89,6 +89,8 @@ export interface ArticlePerso {
 export interface Profil {
   id: string;
   prenom: string;
+  /** Couleur de l'avatar. Absente sur les profils créés avant son ajout. */
+  couleur?: string;
   anneeNaissance: number;
   habitudes: Habitude[];
   /** Catégories d'affaires communes dont cette personne s'occupe (ex. papiers, santé). */
