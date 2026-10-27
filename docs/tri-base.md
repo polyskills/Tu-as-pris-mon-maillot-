@@ -133,4 +133,32 @@ Habitude renommée : « Jeux vidéo » → « Jeux vidéo / tablette ».
 
 ## Check-list voiture (validé)
 
-Section à part, affichée quand le trajet se fait en voiture : ce qu'on **vérifie** avant de partir, pas ce qu'on met dans la valise. Elle accueille les éléments sortis des autres catégories (gilets + triangle, chargeur allume-cigare, sièges auto, badge télépéage). Contenu détaillé : voir la catégorie « Sur place » / à confirmer.
+Section à part, affichée quand le trajet se fait en voiture : ce qu'on **vérifie** avant de partir, pas ce qu'on met dans la valise. Elle accueille les éléments sortis des autres catégories (gilets + triangle, chargeur allume-cigare, sièges auto, badge télépéage). Contenu validé :
+- Gilets jaunes + triangle
+- Sièges auto / rehausseurs installés
+- Chargeur allume-cigare / câble CarPlay
+- Badge télépéage
+- Vignette Crit'Air (si la route traverse une zone à faibles émissions)
+- Vignette autoroute (Suisse, Autriche…), en Europe
+- Pression des pneus et niveaux
+
+La carte grise reste dans les Papiers.
+
+## Sur place (validé)
+
+Changements de fond :
+- Hébergement « Camping » séparé en **« Camping (tente) »** et **« Mobil-home »** (proche d'une location).
+- Nouvelle quantité pour les articles communs : **1 par participant**.
+
+| Article | Décision |
+|---|---|
+| Draps et housses de couette, torchons / éponge | Location et mobil-home |
+| Liquide vaisselle / pastilles | Achetable sur place |
+| Lessive | Renommer « Lessive (quelques dosettes) » ; achetable sur place |
+| Sel, poivre, huile, café, épices | Inchangé, pas achetable |
+| Couteau, tire-bouchon / décapsuleur | Camping (tente) ; suggestions en location |
+| Pinces à linge / corde | Camping (tente) ; suggestion à la plage |
+| Tente, réchaud, vaisselle, table et chaises, rallonge | Camping (tente) |
+| Sacs de couchage, matelas + gonfleur, oreillers | Camping (tente), 1 par participant |
+| Sacs poubelle, papier toilette | Nouvelles suggestions (location) |
+| Sacs de courses, cadeau pour les hôtes | Inchangés |
