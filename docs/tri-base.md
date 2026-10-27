@@ -83,3 +83,23 @@ Règle retenue : un article « achetable sur place » va dans la liste de course
 | Gel douche, shampoing | Achetables sur place ; pas à l'hôtel |
 | Sèche-cheveux, cotons-tiges, pince à épiler | Suggestions |
 | Élastiques, déodorant, appareil dentaire, coupe-ongles, pochette 1 L, serviettes de toilette | Inchangés |
+
+## Santé (validé)
+
+Nouvelle habitude : « Mal des transports » (par personne).
+
+| Article | Décision |
+|---|---|
+| Lunettes de vue + étui | Fusionner |
+| Lunettes de rechange | Suggestion |
+| Masque de ski | Déplacer dans Montagne |
+| Paracétamol | Séparer : « Paracétamol adulte » et « Paracétamol enfant (sirop + pipette) » si bébé ou enfant |
+| Thermomètre | Si bébé ou enfant ; suggestion sinon |
+| Crème solaire | Renommer « Crème solaire (indice 50 pour les enfants) » ; achetable sur place |
+| Après-soleil | Plage seulement ; achetable sur place |
+| Anti-moustiques, sérum physiologique | Achetables sur place |
+| Médicaments mal des transports | Habitude « Mal des transports » (par personne) ; commun si bateau |
+| Anti-diarrhéique / réhydratation | Hors Europe |
+| Crème apaisante piqûres, gel hydroalcoolique, bouchons d'oreilles, arnica | Suggestions |
+| Pansements ampoules | Nouvelle suggestion (randonnée) |
+| Traitement, antihistaminique, lunettes de soleil, trousse de secours, tire-tiques | Inchangés |
