@@ -118,3 +118,19 @@ Habitude renommée : « Jeux vidéo » → « Jeux vidéo / tablette ».
 | Chargeur allume-cigare / CarPlay, enceinte Bluetooth | Suggestions |
 | Lampe frontale / torche | Camping ou randonnée ; suggestion sinon |
 | Chargeur de téléphone, console, liseuse, appareil photo, ordinateur, multiprise | Inchangés |
+
+## Trajet (validé)
+
+| Article | Décision |
+|---|---|
+| Coussin de voyage, cadenas, pèse-bagage, sacs plastique | Suggestions |
+| Gourde | Chaud, plage ou randonnée ; suggestion sinon |
+| Sac à dos de journée | Un pour la famille ; un par personne en randonnée |
+| Tenue de rechange dans le sac du trajet | Nouveau : bébé et enfant |
+| Sacs (mal des transports) | Habitude « Mal des transports » ; commun si bateau |
+| Gilets jaunes + triangle | Sortent de la liste → check-list voiture |
+| Occupations, encas, étiquettes bagages, glacière, sac à linge sale | Inchangés |
+
+## Check-list voiture (validé)
+
+Section à part, affichée quand le trajet se fait en voiture : ce qu'on **vérifie** avant de partir, pas ce qu'on met dans la valise. Elle accueille les éléments sortis des autres catégories (gilets + triangle, chargeur allume-cigare, sièges auto, badge télépéage). Contenu détaillé : voir la catégorie « Sur place » / à confirmer.
