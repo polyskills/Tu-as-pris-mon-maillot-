@@ -1,6 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { confirmer } from '../../components/confirmer';
 import { ReactNode, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { aujourdhuiIso, ChoixDate, dateLongue, plusJours } from '../../components/ChoixDate';
 import { creerStyles, useCouleurs } from '../../components/theme';
 import {
@@ -78,17 +79,10 @@ export default function EditionVoyage() {
   };
 
   const confirmerSuppression = () =>
-    Alert.alert(`Supprimer « ${existant?.nom} » ?`, 'La liste et le pointage seront perdus.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: () => {
-          supprimer(existant!.id);
-          router.dismissAll();
-        },
-      },
-    ]);
+    confirmer(`Supprimer « ${existant?.nom} » ?`, 'La liste et le pointage seront perdus.', () => {
+      supprimer(existant!.id);
+      router.dismissAll();
+    });
 
   const suivant = () => (etape < ETAPES.length - 1 ? setEtape(etape + 1) : valider());
 

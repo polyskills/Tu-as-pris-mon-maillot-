@@ -1,6 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { confirmer } from '../../components/confirmer';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
 import { Avatar, Bouton, Champ, ChoixPuces, couleurProfil, Saisie, useStyles } from '../../components/ui';
 import { habitudesParDefaut } from '../../domain/generer';
@@ -74,17 +75,10 @@ export default function EditionProfil() {
   };
 
   const confirmerSuppression = () =>
-    Alert.alert(`Supprimer ${existant?.prenom} ?`, 'Ses articles seront retirés des voyages.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: () => {
-          supprimer(existant!.id);
-          router.back();
-        },
-      },
-    ]);
+    confirmer(`Supprimer ${existant?.prenom} ?`, 'Ses articles seront retirés des voyages.', () => {
+      supprimer(existant!.id);
+      router.back();
+    });
 
   return (
     <ScrollView style={s.ecran} contentContainerStyle={[s.contenu, { gap: 20 }]} keyboardShouldPersistTaps="handled">
@@ -130,7 +124,10 @@ export default function EditionProfil() {
         />
       </Champ>
 
-      <Champ libelle="S'occupe des affaires communes" aide="Ex. : c'est elle qui gère les papiers et la trousse de secours.">
+      <Champ
+        libelle="S'occupe des affaires communes"
+        aide="Ex. : c'est elle qui gère les papiers et la trousse de secours."
+      >
         <ChoixPuces options={RESPONSABILITES} valeur={responsabilites} onChange={setResponsabilites} />
       </Champ>
 
