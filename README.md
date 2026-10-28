@@ -12,6 +12,17 @@ npm run typecheck
 npm run lint
 ```
 
+## Tester dans un navigateur (Mac ou PC)
+
+Prérequis : Node.js 22.13 ou plus récent (version LTS sur nodejs.org).
+
+```bash
+npm install
+npx expo start --web   # ouvre http://localhost:8081
+```
+
+Différences avec le téléphone : la date de départ se saisit au format AAAA-MM-JJ, pas de vibration, et les données restent dans le navigateur utilisé.
+
 ## Organisation du code
 
 | Dossier | Contenu |
