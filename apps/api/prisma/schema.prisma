@@ -165,3 +165,59 @@ model ArticleVoyage {
   @@id([voyageId, id])
   @@map("article_voyage")
 }
+
+// --- Catalogue et administration ---
+
+/// Catalogue en service. Importé une fois depuis le catalogue de départ, puis modifié dans l'administration.
+model CatalogueArticle {
+  /// Identifiant stable (repris dans les listes des voyages) : jamais modifié après la création.
+  id        String   @id @db.VarChar(60)
+  nom       String   @db.VarChar(200)
+  categorie String   @db.VarChar(20)
+  /// personne | commun
+  portee    String   @db.VarChar(10)
+  /// null (mis d'office) | suggestion | voiture
+  mode      String?  @db.VarChar(12)
+  achetable Boolean  @default(false)
+  /// Condition | Condition[] (absent = toujours)
+  si        Json?
+  /// RegleQuantite (absent = 1)
+  quantite  Json?
+  /// Ordre dans les listes générées
+  ordre     Int
+  /// Archivé = retiré du catalogue en service (restaurable)
+  archive   Boolean  @default(false)
+  creeLe    DateTime @default(now())
+  majLe     DateTime @updatedAt
+  majPar    String?  @db.VarChar(255)
+
+  @@index([ordre])
+  @@map("catalogue_article")
+}
+
+/// Chaque modification du catalogue, avec l'état avant et après.
+model CatalogueHistorique {
+  id        Int      @id @default(autoincrement())
+  articleId String   @db.VarChar(60)
+  /// creation | modification | archivage | restauration
+  action    String   @db.VarChar(14)
+  avant     Json?
+  apres     Json?
+  auteur    String   @db.VarChar(255)
+  date      DateTime @default(now())
+
+  @@index([articleId, date])
+  @@index([date])
+  @@map("catalogue_historique")
+}
+
+/// Personnes qui administrent le catalogue (en plus de ADMIN_EMAILS).
+model Equipier {
+  email     String   @id @db.VarChar(255)
+  /// admin (catalogue + équipe) | editeur (catalogue)
+  role      String   @db.VarChar(10)
+  ajoutePar String   @db.VarChar(255)
+  creeLe    DateTime @default(now())
+
+  @@map("equipier")
+}

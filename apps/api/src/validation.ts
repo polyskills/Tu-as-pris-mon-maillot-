@@ -6,6 +6,7 @@ import {
   HABITUDES,
   HEBERGEMENTS,
   SEXES,
+  TRANCHES,
   TRANSPORTS,
   ZONES,
 } from '@maillot/domain';
@@ -109,3 +110,68 @@ export const schemaImport = z.object({
     )
     .max(200),
 });
+
+// --- Administration du catalogue ---
+
+const valeurs = <K extends string>(r: Record<K, string>) => z.array(enumDe(r)).min(1).max(20).optional();
+
+/** Condition sans exclusion : les « sauf » ne s'imbriquent pas. */
+const conditionSimple = z.strictObject({
+  destinations: valeurs(DESTINATIONS),
+  climats: valeurs(CLIMATS),
+  zones: valeurs(ZONES),
+  transports: valeurs(TRANSPORTS),
+  hebergements: valeurs(HEBERGEMENTS),
+  activites: valeurs(ACTIVITES),
+  ages: valeurs(TRANCHES),
+  sexes: z
+    .array(z.enum(['F', 'M']))
+    .min(1)
+    .max(2)
+    .optional(),
+  habitudes: valeurs(HABITUDES),
+  machineALaver: z.boolean().optional(),
+  nuitsMin: z.number().int().min(1).max(365).optional(),
+});
+
+const condition = conditionSimple.extend({
+  sauf: z.union([conditionSimple, z.array(conditionSimple).min(1).max(10)]).optional(),
+});
+
+const quantiteCatalogue = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('fixe'), n: z.number().int().min(1).max(99) }),
+  z.strictObject({
+    type: z.literal('parJour'),
+    ratio: z.number().min(0).max(10),
+    plus: z.number().int().min(0).max(50).optional(),
+    max: z.number().int().min(1).max(99).optional(),
+    auChaud: z.number().min(0).max(10).optional(),
+  }),
+  z.strictObject({
+    type: z.literal('parClimat'),
+    chaud: z.number().int().min(1).max(99),
+    tempere: z.number().int().min(1).max(99),
+    froid: z.number().int().min(1).max(99),
+  }),
+  z.strictObject({ type: z.literal('parParticipant') }),
+]);
+
+/** Article du catalogue tel que saisi dans l'administration (l'identifiant est donné par le serveur). */
+export const schemaArticleCatalogue = z.strictObject({
+  nom: z.string().trim().min(1).max(200),
+  categorie,
+  portee: z.enum(['personne', 'commun']),
+  mode: z.enum(['suggestion', 'voiture']).nullish(),
+  achetable: z.boolean().optional(),
+  si: z.union([condition, z.array(condition).min(1).max(20)]).nullish(),
+  quantite: quantiteCatalogue.nullish(),
+});
+
+export const schemaEquipier = z.object({
+  role: z.enum(['admin', 'editeur']),
+});
+
+export const schemaEmail = z
+  .email()
+  .max(255)
+  .transform((e) => e.toLowerCase());

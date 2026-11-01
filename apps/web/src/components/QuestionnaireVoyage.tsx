@@ -2,7 +2,6 @@
 
 import {
   ACTIVITES,
-  CATALOGUE,
   CLIMATS,
   DESTINATIONS,
   genererArticles,
@@ -45,6 +44,7 @@ const liste = <K extends string>(cles: K[], libelles: Record<K, string>) =>
 export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
   const router = useRouter();
   const profils = useStore((s) => s.profils);
+  const catalogue = useStore((s) => s.catalogue);
   const creer = useStore((s) => s.creerVoyage);
   const modifier = useStore((s) => s.modifierVoyage);
   const supprimer = useStore((s) => s.supprimerVoyage);
@@ -99,7 +99,7 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
     </Carte>
   );
 
-  const apercu = genererArticles(p, profils, CATALOGUE);
+  const apercu = genererArticles(p, profils, catalogue);
   const noms = profils.filter((x) => p.participants.includes(x.id)).map((x) => x.prenom);
   const lignes: [string, string, number][] = [
     ['Voyage', p.nom || '—', 0],

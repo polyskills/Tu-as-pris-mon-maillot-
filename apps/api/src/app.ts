@@ -5,8 +5,9 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { z } from 'zod';
 import { auth } from './auth';
+import * as catalogue from './catalogue';
 import * as donnees from './donnees';
-import { Conflit, Introuvable } from './donnees';
+import { Conflit, Interdit, Introuvable, NonConnecte } from './erreurs';
 import { env } from './env';
 import { journal } from './journal';
 
@@ -100,6 +101,7 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
         if (!session) return next(new NonConnecte());
         res.locals.familleId = await donnees.familleDuCompte(session.user.id);
         res.locals.email = session.user.email;
+        res.locals.role = await catalogue.roleDe(session.user.email);
         next();
       })
       .catch(next);
@@ -109,7 +111,16 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
 
   app.get(
     '/api/moi',
-    route(async (req, res) => ({ email: res.locals.email as string, familleId: famille(res) })),
+    route(async (req, res) => ({
+      email: res.locals.email as string,
+      familleId: famille(res),
+      ...(res.locals.role && { role: res.locals.role as catalogue.Role }),
+    })),
+  );
+  // Catalogue en service : l'interface génère les listes avec, comme le serveur.
+  app.get(
+    '/api/catalogue',
+    route(async () => catalogue.catalogueEnService()),
   );
   app.get(
     '/api/etat',
@@ -159,6 +170,53 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     route(async (req, res) => donnees.supprimerArticle(famille(res), param(req, 'id'), param(req, 'article'))),
   );
 
+  // --- Administration : catalogue (admin et éditeur), équipe (admin) ---
+  const exiger =
+    (...roles: catalogue.Role[]) =>
+    (_req: Request, res: Response, next: NextFunction) =>
+      next(roles.includes(res.locals.role) ? undefined : new Interdit());
+  const auteur = (res: Response) => res.locals.email as string;
+
+  app.use('/api/admin', exiger('admin', 'editeur'));
+  app.get(
+    '/api/admin/catalogue',
+    route(async () => catalogue.listerAdmin()),
+  );
+  app.post(
+    '/api/admin/catalogue',
+    route(async (req, res) => catalogue.creerArticle(auteur(res), req.body)),
+  );
+  app.put(
+    '/api/admin/catalogue/:id',
+    route(async (req, res) => catalogue.modifierArticle(auteur(res), param(req, 'id'), req.body)),
+  );
+  app.post(
+    '/api/admin/catalogue/:id/archiver',
+    route(async (req, res) => catalogue.archiverArticle(auteur(res), param(req, 'id'), true)),
+  );
+  app.post(
+    '/api/admin/catalogue/:id/restaurer',
+    route(async (req, res) => catalogue.archiverArticle(auteur(res), param(req, 'id'), false)),
+  );
+  app.get(
+    '/api/admin/historique',
+    route(async (req) => catalogue.historique(typeof req.query.article === 'string' ? req.query.article : undefined)),
+  );
+
+  app.use('/api/admin/equipe', exiger('admin'));
+  app.get(
+    '/api/admin/equipe',
+    route(async () => catalogue.equipe()),
+  );
+  app.put(
+    '/api/admin/equipe/:email',
+    route(async (req, res) => catalogue.enregistrerEquipier(auteur(res), param(req, 'email'), req.body)),
+  );
+  app.delete(
+    '/api/admin/equipe/:email',
+    route(async (req, res) => catalogue.retirerEquipier(auteur(res), param(req, 'email'))),
+  );
+
   app.use('/api', (_req, res) => {
     res.status(404).json({ erreur: { code: 'introuvable', message: 'Route inconnue' } });
   });
@@ -170,6 +228,8 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     void _next;
     if (err instanceof NonConnecte) {
       res.status(401).json({ erreur: { code: 'non-connecte', message: 'Connexion requise' } });
+    } else if (err instanceof Interdit) {
+      res.status(403).json({ erreur: { code: 'interdit', message: 'Accès réservé à l’équipe du catalogue' } });
     } else if (err instanceof z.ZodError) {
       res.status(400).json({
         erreur: { code: 'invalide', message: 'Données invalides', details: z.flattenError(err).fieldErrors },
@@ -188,5 +248,3 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
 
   return app;
 }
-
-class NonConnecte extends Error {}

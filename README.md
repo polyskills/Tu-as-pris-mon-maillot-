@@ -22,6 +22,9 @@ pnpm dev                                 # interface : http://localhost:3000 (/a
 
 Connexion : saisir une adresse, ouvrir l'e-mail reçu dans Mailpit, cliquer sur le lien.
 
+Administration du catalogue : mettre son adresse dans `ADMIN_EMAILS` (apps/api/.env), se reconnecter, menu
+**Catalogue**. Au premier démarrage, l'API importe le catalogue de départ en base.
+
 Déploiement avec le kit Polytools Admin v2 : [deploy/README.md](deploy/README.md).
 
 Autres commandes (depuis la racine) :
@@ -31,7 +34,7 @@ pnpm test            # tests du moteur et de l'API (l'API demande une base de te
 pnpm typecheck
 pnpm lint
 pnpm build           # build de production (interface + API)
-pnpm catalogue       # régénère docs/catalogue.md après une modification du catalogue
+pnpm catalogue       # régénère docs/catalogue.md (catalogue de départ)
 ```
 
 ## Organisation du code
@@ -40,13 +43,15 @@ pnpm catalogue       # régénère docs/catalogue.md après une modification du 
 |---|---|
 | `apps/web/src/app/` | Écrans (Next.js) : accueil, famille, profil, questionnaire voyage, valise |
 | `apps/web/src/components/` | Mise en page responsive, composants d'interface, questionnaire |
+| `apps/web/src/app/admin/` | Administration : catalogue, fiche article (éditeur de règles, aperçu, simulation), équipe |
 | `apps/web/src/store/` | État de l'appli (Zustand) : mise à jour immédiate de l'écran, puis enregistrement via l'API |
-| `apps/api/src/` | API : comptes, routes, accès aux données (`donnees.ts`), validation (`validation.ts`) |
+| `apps/api/src/` | API : comptes, routes, accès aux données (`donnees.ts`), catalogue et équipe (`catalogue.ts`), validation (`validation.ts`) |
 | `apps/api/prisma/` | Schéma de la base et migrations |
 | `shared/domain/src/types.ts` | Modèle : profils, voyages, articles, conditions |
-| `shared/domain/src/catalogue.ts` | Base d'articles et leurs règles « on prend X si… » |
+| `shared/domain/src/catalogue.ts` | Catalogue de départ (importé en base au premier démarrage) |
+| `shared/domain/src/description.ts` | Règles traduites en français (administration, docs/catalogue.md) |
 | `shared/domain/src/generer.ts` | Moteur : génération, suggestions, quantités, fusion après modification, progression |
-| `docs/catalogue.md` | Tout le catalogue et ses règles en français (généré) |
+| `docs/catalogue.md` | Catalogue de départ et ses règles en français (généré) |
 | `docs/tri-base.md` | Décisions du tri de la base, catégorie par catégorie |
 
 ## Règles du moteur

@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { creerApp } from '../src/app';
+import { oublierCatalogue } from '../src/catalogue';
 import { prisma } from '../src/db';
 import { derniersLiens } from '../src/mail';
 
@@ -9,6 +10,9 @@ const ORIGINE = process.env.PUBLIC_URL as string;
 /** Vide toutes les tables entre deux fichiers de tests. */
 export async function viderBase() {
   for (const table of [
+    'catalogue_historique',
+    'catalogue_article',
+    'equipier',
     'article_voyage',
     'voyage',
     'profil',
@@ -21,6 +25,7 @@ export async function viderBase() {
   ]) {
     await prisma.$executeRawUnsafe(`DELETE FROM \`${table}\``);
   }
+  oublierCatalogue();
 }
 
 /** Connexion complète par lien magique ; renvoie un client qui garde le cookie de session. */

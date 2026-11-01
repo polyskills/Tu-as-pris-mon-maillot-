@@ -2,7 +2,6 @@
 
 import {
   ArticleVoyage,
-  CATALOGUE,
   Categorie,
   CATEGORIES,
   COMMUN,
@@ -78,6 +77,7 @@ export default function Valise() {
   const { id } = useParams<{ id: string }>();
   const voyage = useStore((s) => s.voyages.find((v) => v.id === id));
   const profils = useStore((s) => s.profils);
+  const catalogue = useStore((s) => s.catalogue);
   const changerStatut = useStore((s) => s.changerStatut);
   const changerQuantite = useStore((s) => s.changerQuantite);
   const changerListe = useStore((s) => s.changerListe);
@@ -165,7 +165,7 @@ export default function Valise() {
   const suggestions =
     ongletActif === COURSES || ongletActif === VOITURE
       ? []
-      : genererSuggestions(voyage, profils, CATALOGUE, articles).filter(
+      : genererSuggestions(voyage, profils, catalogue, articles).filter(
           (a) => ongletActif === TOUT || a.proprietaire === ongletActif,
         );
   const afficherProprietaire = ongletActif === TOUT || ongletActif === COURSES;

@@ -1,86 +1,20 @@
-// Génère docs/catalogue.md : tout le catalogue avec ses règles, traduites en français.
-// Lancer avec : npm run catalogue
+// Génère docs/catalogue.md : le catalogue de départ (shared/domain/src/catalogue.ts) avec ses règles en français.
+// Le catalogue en service vit en base et se consulte dans l'administration. Lancer avec : pnpm catalogue
 
 import { writeFileSync } from 'node:fs';
 import { CATALOGUE } from '../src/catalogue';
-import {
-  ACTIVITES,
-  CATEGORIES,
-  CLIMATS,
-  DESTINATIONS,
-  HABITUDES,
-  HEBERGEMENTS,
-  SEXES,
-  TRANCHES,
-  TRANSPORTS,
-  ZONES,
-} from '../src/libelles';
-import { ArticleCatalogue, Categorie, Condition, RegleQuantite } from '../src/types';
+import { decrireQuand, decrireQuantite, decrireType } from '../src/description';
+import { CATEGORIES } from '../src/libelles';
+import { ArticleCatalogue, Categorie } from '../src/types';
 
-/** Retire l'emoji en tête d'un libellé (« 🏖️ Plage » → « Plage »). */
-const sansEmoji = (s: string) => s.replace(/^[^\p{L}]+\s/u, '');
-const ou = <K extends string>(cles: K[], libelles: Record<K, string>) =>
-  cles.map((k) => sansEmoji(libelles[k])).join(' ou ');
+const quand = (a: ArticleCatalogue) => decrireQuand(a, ' **OU** ');
 
-function decrire(c: Condition): string {
-  const morceaux: string[] = [];
-  if (c.destinations) morceaux.push(`destination ${ou(c.destinations, DESTINATIONS)}`);
-  if (c.climats) morceaux.push(`climat ${ou(c.climats, CLIMATS).toLowerCase()}`);
-  if (c.zones) morceaux.push(ou(c.zones, ZONES));
-  if (c.transports) morceaux.push(`en ${ou(c.transports, TRANSPORTS).toLowerCase()}`);
-  if (c.hebergements) morceaux.push(`hébergement ${ou(c.hebergements, HEBERGEMENTS).toLowerCase()}`);
-  if (c.activites) morceaux.push(`activité ${ou(c.activites, ACTIVITES).toLowerCase()}`);
-  if (c.ages) morceaux.push(ou(c.ages, TRANCHES).toLowerCase());
-  if (c.sexes) morceaux.push(ou(c.sexes, SEXES).toLowerCase());
-  if (c.habitudes) morceaux.push(`habitude « ${ou(c.habitudes, HABITUDES)} »`);
-  if (c.machineALaver !== undefined) morceaux.push(c.machineALaver ? 'machine à laver' : 'sans machine à laver');
-  if (c.nuitsMin !== undefined) morceaux.push(`${c.nuitsMin} nuits ou plus`);
-  let texte = morceaux.join(' + ') || 'toujours';
-  if (c.sauf) {
-    const sauf = (Array.isArray(c.sauf) ? c.sauf : [c.sauf]).map(decrire).join(' ou ');
-    texte += `, sauf ${sauf}`;
-  }
-  return texte;
-}
-
-function quand(a: ArticleCatalogue): string {
-  const base = !a.si ? 'Toujours' : Array.isArray(a.si) ? a.si.map(decrire).join(' **OU** ') : decrire(a.si);
-  const texte = base.charAt(0).toUpperCase() + base.slice(1);
-  return a.mode === 'voiture' ? `${texte} (trajet en voiture)` : texte;
-}
-
-const nb = (n: number) => String(n).replace('.', ',');
-
-function quantite(q?: RegleQuantite): string {
-  if (!q) return '1';
-  switch (q.type) {
-    case 'fixe':
-      return String(q.n);
-    case 'parClimat':
-      return `chaud ${q.chaud} · tempéré ${q.tempere} · froid ${q.froid}`;
-    case 'parParticipant':
-      return '1 par participant';
-    case 'parJour': {
-      let t = `${nb(q.ratio)} par jour`;
-      if (q.auChaud !== undefined) t += ` (${nb(q.auChaud)} au chaud)`;
-      if (q.plus) t += ` + ${q.plus}`;
-      if (q.max) t += `, ${q.max} max`;
-      return t;
-    }
-  }
-}
-
-const TYPES = { liste: 'Mis d’office', suggestion: '💡 Suggestion', voiture: '🚗 Check-list voiture' };
-const type = (a: ArticleCatalogue) => {
-  const t = TYPES[a.mode ?? 'liste'];
-  return a.achetable ? `${t} · 🛒 achetable sur place` : t;
-};
 const echapper = (s: string) => s.replace(/\|/g, '\\|');
 
 const lignes: string[] = [
   '# Catalogue des articles',
   '',
-  '> Fichier généré automatiquement depuis `shared/domain/src/catalogue.ts` par `npm run catalogue`. Ne pas le modifier à la main.',
+  '> Fichier généré automatiquement depuis `shared/domain/src/catalogue.ts` par `pnpm catalogue`. Catalogue de départ : celui en service se consulte dans l’administration.',
   '',
   `**${CATALOGUE.length} articles** : ${CATALOGUE.filter((a) => !a.mode).length} mis d’office, ${
     CATALOGUE.filter((a) => a.mode === 'suggestion').length
@@ -109,7 +43,7 @@ for (const cat of Object.keys(CATEGORIES) as Categorie[]) {
   );
   for (const a of articles) {
     lignes.push(
-      `| ${echapper(a.nom)} | ${a.portee === 'commun' ? 'Commun' : 'Chaque personne'} | ${echapper(quand(a))} | ${quantite(a.quantite)} | ${type(a)} |`,
+      `| ${echapper(a.nom)} | ${a.portee === 'commun' ? 'Commun' : 'Chaque personne'} | ${echapper(quand(a))} | ${decrireQuantite(a.quantite)} | ${decrireType(a)} |`,
     );
   }
   lignes.push('');

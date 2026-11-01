@@ -1,8 +1,8 @@
 'use client';
 
 import {
+  ArticleCatalogue,
   ArticleVoyage,
-  CATALOGUE,
   Categorie,
   fusionner,
   genererArticles,
@@ -22,13 +22,20 @@ import { api, ErreurApi } from '@/lib/api';
 export const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 type EtatServeur = { profils: Profil[]; voyages: Voyage[] };
+export type Role = 'admin' | 'editeur';
+type Catalogue = { version: string; articles: ArticleCatalogue[] };
 
 interface Etat extends EtatServeur {
   statut: 'chargement' | 'deconnecte' | 'pret';
   email?: string;
+  /** Rôle dans l'équipe du catalogue (absent pour un compte ordinaire). */
+  role?: Role;
+  /** Catalogue en service, fourni par le serveur : les listes sont générées avec. */
+  catalogue: ArticleCatalogue[];
   erreur?: string;
 
   charger: () => Promise<void>;
+  rechargerCatalogue: () => Promise<void>;
   effacerErreur: () => void;
   importer: (donnees: EtatServeur) => Promise<void>;
 
@@ -47,9 +54,9 @@ interface Etat extends EtatServeur {
   supprimerArticle: (voyageId: string, articleId: string) => void;
 }
 
-const regenerer = (v: Voyage, profils: Profil[]): Voyage => ({
+const regenerer = (v: Voyage, profils: Profil[], catalogue: ArticleCatalogue[]): Voyage => ({
   ...v,
-  articles: fusionner(v.articles, genererArticles(v, profils, CATALOGUE), v.participants),
+  articles: fusionner(v.articles, genererArticles(v, profils, catalogue), v.participants),
 });
 
 const enc = encodeURIComponent;
@@ -61,8 +68,12 @@ export const useStore = create<Etat>()((set, get) => {
 
   const charger = async () => {
     try {
-      const [moi, etat] = await Promise.all([api<{ email: string }>('/moi'), api<EtatServeur>('/etat')]);
-      set({ ...etat, email: moi.email, statut: 'pret' });
+      const [moi, etat, catalogue] = await Promise.all([
+        api<{ email: string; role?: Role }>('/moi'),
+        api<EtatServeur>('/etat'),
+        api<Catalogue>('/catalogue'),
+      ]);
+      set({ ...etat, email: moi.email, role: moi.role, catalogue: catalogue.articles, statut: 'pret' });
     } catch (e) {
       if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte', profils: [], voyages: [] });
       else
@@ -111,8 +122,13 @@ export const useStore = create<Etat>()((set, get) => {
     profils: [],
     voyages: [],
     statut: 'chargement',
+    catalogue: [],
 
     charger,
+    rechargerCatalogue: async () => {
+      const { articles } = await api<Catalogue>('/catalogue');
+      set({ catalogue: articles });
+    },
     effacerErreur: () => set({ erreur: undefined }),
 
     importer: async (donnees) => {
@@ -125,7 +141,7 @@ export const useStore = create<Etat>()((set, get) => {
       set((s) => {
         const existe = s.profils.some((x) => x.id === p.id);
         const profils = existe ? s.profils.map((x) => (x.id === p.id ? p : x)) : [...s.profils, p];
-        const voyages = s.voyages.map((v) => (v.participants.includes(p.id) ? regenerer(v, profils) : v));
+        const voyages = s.voyages.map((v) => (v.participants.includes(p.id) ? regenerer(v, profils, s.catalogue) : v));
         return { profils, voyages };
       });
       envoyer(() => api<EtatServeur>(`/profils/${enc(p.id)}`, { methode: 'PUT', corps: p }), remplacerEtat);
@@ -136,7 +152,7 @@ export const useStore = create<Etat>()((set, get) => {
         const profils = s.profils.filter((p) => p.id !== id);
         const voyages = s.voyages.map((v) =>
           v.participants.includes(id)
-            ? regenerer({ ...v, participants: v.participants.filter((x) => x !== id) }, profils)
+            ? regenerer({ ...v, participants: v.participants.filter((x) => x !== id) }, profils, s.catalogue)
             : v,
         );
         return { profils, voyages };
@@ -148,7 +164,12 @@ export const useStore = create<Etat>()((set, get) => {
       const id = nouvelId();
       set((s) => ({
         voyages: [
-          { ...params, id, creeLe: new Date().toISOString(), articles: genererArticles(params, s.profils, CATALOGUE) },
+          {
+            ...params,
+            id,
+            creeLe: new Date().toISOString(),
+            articles: genererArticles(params, s.profils, s.catalogue),
+          },
           ...s.voyages,
         ],
       }));
@@ -158,7 +179,7 @@ export const useStore = create<Etat>()((set, get) => {
 
     modifierVoyage: (id, params) => {
       set((s) => ({
-        voyages: s.voyages.map((v) => (v.id === id ? regenerer({ ...v, ...params }, s.profils) : v)),
+        voyages: s.voyages.map((v) => (v.id === id ? regenerer({ ...v, ...params }, s.profils, s.catalogue) : v)),
       }));
       envoyer(() => api<Voyage>(`/voyages/${enc(id)}`, { methode: 'PUT', corps: params }), remplacerVoyage);
     },

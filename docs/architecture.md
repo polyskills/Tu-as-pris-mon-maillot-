@@ -33,6 +33,12 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   y compris hors ligne) et pourra tourner côté API sans modification.
 - **Tout accès aux données passera par l'API.** Aucune fonction propre à un hébergeur. Configuration par variables
   d'environnement. Évolutions de base versionnées (migrations Prisma).
+- **Catalogue en base** : importé une fois depuis `shared/domain/src/catalogue.ts` (catalogue de départ), puis modifié
+  dans l'administration. L'API le garde en mémoire et le recharge après chaque modification ; l'interface le reçoit par
+  `GET /api/catalogue` et génère les listes avec. Les voyages existants prennent les changements à leur prochaine
+  modification (voyage ou profil). Un article archivé disparaît des listes régénérées, pointage compris.
+- **Administration** (`/admin`) : rôles **admin** (catalogue + équipe) et **éditeur** (catalogue). Admins d'office :
+  variable `ADMIN_EMAILS`. Pas de suppression définitive : archivage et restauration, historique avant / après.
 - **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.
 - **Migration de la base** vers un MySQL géré (OVHcloud, Scaleway…) si le produit se développe : copie des données
   + changement de l'URL de connexion.
@@ -53,7 +59,7 @@ Thème clair / sombre selon le réglage de l'appareil.
 2. ✅ API Express + Prisma + MariaDB : comptes (lien de connexion par e-mail), familles, voyages, pointage, reprise des données du navigateur
 3. ✅ Conformité au kit Polytools Admin v2 (pnpm, processus unique, variables, en-têtes, journaux)
 4. ✅ Interface branchée sur l'API : connexion par lien, données sur le serveur, pointage instantané, récupération des données du navigateur
-5. Catalogue en base + **Administration** (éditeur de règles, simulateur, archivage, historique)
+5. ✅ Catalogue en base + **Administration** (éditeur de règles, simulateur, archivage, historique, équipe)
 6. Partage de la famille et pointage à plusieurs
 7. Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin
 8. Ouverture publique : sécurité (limitation de requêtes, en-têtes, fail2ban), sauvegardes hors du VPS, pages légales

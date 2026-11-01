@@ -59,6 +59,8 @@ SMTP_PORT=1025
 SMTP_USER=""
 SMTP_PASSWORD=""
 MAIL_FROM="Tu as pris mon maillot <no-reply@adaptools.fr>"
+# Administration du catalogue : admins d'office (séparés par des virgules). Les autres s'ajoutent dans l'écran Équipe.
+ADMIN_EMAILS="m.hutin@polyskills.fr"
 ```
 
 ```bash
@@ -68,6 +70,10 @@ sudo -u app-voyage nano /var/www/voyage/shared/app.env
 Les e-mails de connexion se lisent dans Mailpit, par tunnel SSH : voir [mailpit.md](mailpit.md).
 Option de secours sans Mailpit, **DEV uniquement** : `LIENS_DANS_LES_JOURNAUX="oui"` écrit le lien dans les journaux.
 Jamais en PROD : ce lien donne accès au compte.
+
+Au premier démarrage sur une base neuve, l'API importe le catalogue de départ (220 articles) dans la table
+`catalogue_article`. Ensuite, le catalogue se modifie dans l'outil (menu **Catalogue**) : un nouveau déploiement ne
+l'écrase pas. DEV et PROD ont chacun leur catalogue (bases séparées).
 
 ## 4. Déployer
 

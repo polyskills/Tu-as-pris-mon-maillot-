@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, LogOut, Luggage, Users, X } from 'lucide-react';
+import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
@@ -12,6 +12,13 @@ const NAVIGATION = [
   { href: '/', libelle: 'Mes voyages', Icone: Luggage, actif: (p: string) => p === '/' || p.startsWith('/voyage') },
   { href: '/famille', libelle: 'Ma famille', Icone: Users, actif: (p: string) => p.startsWith('/famille') },
 ];
+/** Visible seulement pour l'équipe du catalogue. */
+const ADMINISTRATION = {
+  href: '/admin',
+  libelle: 'Catalogue',
+  Icone: SlidersHorizontal,
+  actif: (p: string) => p.startsWith('/admin'),
+};
 
 /**
  * Mise en page commune : menu latéral sur ordinateur et tablette, barre d'onglets en bas sur smartphone.
@@ -22,6 +29,7 @@ export function Coque({ children }: { children: ReactNode }) {
   const router = useRouter();
   const statut = useStore((s) => s.statut);
   const email = useStore((s) => s.email);
+  const role = useStore((s) => s.role);
   const charger = useStore((s) => s.charger);
   const surConnexion = chemin === '/connexion';
 
@@ -39,9 +47,11 @@ export function Coque({ children }: { children: ReactNode }) {
     return <p className="p-10 text-center text-discret">{statut === 'chargement' ? 'Chargement…' : ''}</p>;
   }
 
+  const navigation = role ? [...NAVIGATION, ADMINISTRATION] : NAVIGATION;
+
   const seDeconnecter = async () => {
     await deconnecter().catch(() => undefined);
-    useStore.setState({ statut: 'deconnecte', profils: [], voyages: [], email: undefined });
+    useStore.setState({ statut: 'deconnecte', profils: [], voyages: [], email: undefined, role: undefined });
   };
 
   return (
@@ -51,7 +61,7 @@ export function Coque({ children }: { children: ReactNode }) {
           <span className="block text-sm font-semibold text-discret">Tu as pris</span>
           <span className="block text-xl font-extrabold">mon maillot ? 🩱</span>
         </Link>
-        {NAVIGATION.map(({ href, libelle, Icone, actif }) => (
+        {navigation.map(({ href, libelle, Icone, actif }) => (
           <Link
             key={href}
             href={href}
@@ -94,7 +104,7 @@ export function Coque({ children }: { children: ReactNode }) {
       <MessageErreur />
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-bordure bg-carte pb-[env(safe-area-inset-bottom)] md:hidden">
-        {NAVIGATION.map(({ href, libelle, Icone, actif }) => (
+        {navigation.map(({ href, libelle, Icone, actif }) => (
           <Link
             key={href}
             href={href}

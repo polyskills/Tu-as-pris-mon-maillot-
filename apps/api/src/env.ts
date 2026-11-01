@@ -17,6 +17,16 @@ const schema = z.object({
   MAIL_FROM: z.string().default('no-reply@adaptools.fr'),
   /** « oui » : sans serveur d'e-mails, écrit le lien de connexion dans les journaux (DEV uniquement, jamais en PROD). */
   LIENS_DANS_LES_JOURNAUX: z.enum(['oui', 'non']).default('non'),
+  /** Adresses administratrices d'office (séparées par des virgules) : elles gèrent le catalogue et l'équipe. */
+  ADMIN_EMAILS: z
+    .string()
+    .default('')
+    .transform((s) =>
+      s
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
 });
 
 /** Une variable manquante ou invalide arrête l'API au démarrage avec un message clair. */

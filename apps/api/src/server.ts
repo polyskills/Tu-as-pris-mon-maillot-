@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { creerApp } from './app';
+import { catalogueEnService } from './catalogue';
 import { prisma } from './db';
 import { env } from './env';
 import { journal } from './journal';
@@ -27,6 +28,9 @@ async function interfaceNext() {
   return appli.getRequestHandler();
 }
 
+// Charge le catalogue (et l'importe en base au premier démarrage) avant d'accepter des requêtes.
+const { articles } = await catalogueEnService();
+journal.info(`Catalogue : ${articles.length} articles en service`);
 const pages = await interfaceNext();
 const serveur = creerApp(pages).listen(env.PORT, env.HOST, () => {
   journal.info(`À l'écoute sur http://${env.HOST}:${env.PORT}${pages ? ' (interface + API)' : ' (API seule)'}`);

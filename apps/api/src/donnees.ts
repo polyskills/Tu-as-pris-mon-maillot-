@@ -1,6 +1,5 @@
 import {
   ArticleVoyage,
-  CATALOGUE,
   COMMUN,
   fusionner,
   genererArticles,
@@ -10,15 +9,16 @@ import {
   Voyage,
 } from '@maillot/domain';
 import { z } from 'zod';
+import { articlesEnService } from './catalogue';
 import { prisma } from './db';
+import { Conflit, Introuvable } from './erreurs';
 import type { Prisma } from './generated/prisma/client';
 import { schemaAjoutArticle, schemaImport, schemaMajArticle, schemaNouveauVoyage, schemaProfil } from './validation';
 
 // Accès aux données d'une famille. Toutes les fonctions reçoivent l'identifiant de la famille du compte connecté :
 // impossible de lire ou modifier les données d'une autre famille.
 
-export class Introuvable extends Error {}
-export class Conflit extends Error {}
+export { Conflit, Introuvable } from './erreurs';
 
 type Tx = Prisma.TransactionClient;
 /** Valeur stockée dans une colonne JSON. */
@@ -183,9 +183,10 @@ async function regenererVoyagesDe(
   transformer: (v: Voyage) => Voyage = (v) => v,
 ) {
   const profils = await profilsDe(tx, familleId);
+  const catalogue = await articlesEnService();
   const lignes = await tx.voyage.findMany({ where: { familleId }, include: { articles: true } });
   for (const v of lignes.map(versVoyage).filter(concerne).map(transformer)) {
-    const articles = fusionner(v.articles, genererArticles(v, profils, CATALOGUE), v.participants);
+    const articles = fusionner(v.articles, genererArticles(v, profils, catalogue), v.participants);
     await tx.voyage.update({ where: { id: v.id }, data: { participants: json(v.participants) } });
     await remplacerArticles(tx, v.id, articles);
   }
@@ -208,7 +209,7 @@ export async function creerVoyage(familleId: string, donnees: unknown) {
   return prisma.$transaction(async (tx) => {
     if (await tx.voyage.findUnique({ where: { id } })) throw new Conflit('Identifiant déjà utilisé');
     await verifierParticipants(tx, familleId, params.participants);
-    const articles = genererArticles(params, await profilsDe(tx, familleId), CATALOGUE);
+    const articles = genererArticles(params, await profilsDe(tx, familleId), await articlesEnService());
     await tx.voyage.create({ data: { id, familleId, ...colonnesParametres(params) } });
     await remplacerArticles(tx, id, articles);
     return voyageDe(tx, familleId, id);
@@ -223,7 +224,7 @@ export async function modifierVoyage(familleId: string, voyageId: string, donnee
     await verifierParticipants(tx, familleId, params.participants);
     const articles = fusionner(
       ancien.articles,
-      genererArticles(params, await profilsDe(tx, familleId), CATALOGUE),
+      genererArticles(params, await profilsDe(tx, familleId), await articlesEnService()),
       params.participants,
     );
     await tx.voyage.update({ where: { id: voyageId }, data: colonnesParametres(params) });
@@ -286,9 +287,12 @@ export async function ajouterArticle(familleId: string, voyageId: string, donnee
 /** Ajoute une suggestion : elle est recalculée côté serveur, l'interface n'envoie que son identifiant. */
 export async function ajouterSuggestion(familleId: string, voyageId: string, suggestionId: string) {
   const voyage = await voyageDe(prisma, familleId, voyageId);
-  const suggestion = genererSuggestions(voyage, await profilsDe(prisma, familleId), CATALOGUE, voyage.articles).find(
-    (s) => s.id === suggestionId,
-  );
+  const suggestion = genererSuggestions(
+    voyage,
+    await profilsDe(prisma, familleId),
+    await articlesEnService(),
+    voyage.articles,
+  ).find((s) => s.id === suggestionId);
   if (!suggestion) throw new Introuvable('Suggestion introuvable');
   await prisma.articleVoyage.create({ data: colonnesArticle(voyageId, suggestion) });
   return suggestion;
@@ -335,13 +339,14 @@ export async function importer(familleId: string, donnees: unknown) {
     }
     // La liste est recalculée avec le catalogue actuel : le pointage, les quantités ajustées et les ajouts sont gardés.
     const profilsImportes = await profilsDe(tx, familleId);
+    const catalogue = await articlesEnService();
     for (const { id, articles, ...params } of voyages) {
       const participants = params.participants.filter((x) => idsProfils.has(x));
       const parametres = { ...params, participants } as ParametresVoyage;
       await tx.voyage.create({ data: { id, familleId, ...colonnesParametres(parametres) } });
       const liste = fusionner(
         articles as ArticleVoyage[],
-        genererArticles(parametres, profilsImportes, CATALOGUE),
+        genererArticles(parametres, profilsImportes, catalogue),
         participants,
       );
       await remplacerArticles(tx, id, liste);
