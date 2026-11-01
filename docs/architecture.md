@@ -52,6 +52,13 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   chaque modification ; le message ne contient pas de données, l'interface relit l'état via l'API. Émetteur en
   mémoire (un seul processus). En-tête `X-Accel-Buffering: no` pour Nginx, battement toutes les 25 s (sous le
   `proxy_read_timeout` de 60 s). Relecture de secours toutes les 30 s si le flux est coupé.
+- **Application installable et hors ligne** (PWA) : manifeste (`app/manifest.ts`), icônes dans `apps/web/public`
+  (`icon.svg` est la source ; les PNG en sont tirés), service worker `public/sw.js` enregistré en production
+  seulement. Le service worker garde les pages (réseau d'abord) et les fichiers de Next.js (cache d'abord), et
+  pré-charge les pages des voyages du compte ; il ne met jamais `/api` en cache. Les données restent gérées par
+  l'application : copie sur l'appareil (`localStorage`) pour s'ouvrir sans réseau, et file d'attente du pointage
+  (case, quantité, liste) envoyée au retour du réseau. Hors ligne, les autres modifications (profils, voyages,
+  ajouts) sont refusées avec un message. À la déconnexion, tout ce qui concerne le compte est effacé de l'appareil.
 - **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.
 - **Migration de la base** vers un MySQL géré (OVHcloud, Scaleway…) si le produit se développe : copie des données
   + changement de l'URL de connexion.
@@ -75,7 +82,7 @@ Thème clair / sombre selon le réglage de l'appareil.
 5. ✅ Catalogue en base + **Administration** (éditeur de règles, simulateur, archivage, historique, équipe)
 6. ✅ Partage de la famille (invitation par e-mail, rôle de propriétaire transmissible) et pointage à plusieurs en
    direct, avec « Mis par … »
-7. Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin
+7. ✅ Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin
 8. Ouverture publique : sécurité (limitation de requêtes, en-têtes, fail2ban), sauvegardes hors du VPS, pages légales
    et RGPD, freemium (paiement)
 

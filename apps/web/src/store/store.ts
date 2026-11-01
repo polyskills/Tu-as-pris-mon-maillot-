@@ -14,10 +14,26 @@ import {
 } from '@maillot/domain';
 import { create } from 'zustand';
 import { api, ErreurApi } from '@/lib/api';
+import {
+  ajouterALaFile,
+  appliquerFile,
+  effacerDonneesLocales,
+  lireDonnees,
+  lireFile,
+  PatchArticle,
+  PointageEnAttente,
+  renommerDansFile,
+  sauverDonnees,
+  sauverFile,
+} from '@/lib/horsLigne';
 
 // Les données vivent sur le serveur. Chaque action met d'abord l'écran à jour (le pointage reste instantané),
 // puis l'enregistre via l'API. Les écritures partent dans l'ordre, une à la fois ; en cas d'échec, on recharge
 // l'état du serveur et on affiche l'erreur.
+//
+// Hors ligne : une copie des données est gardée sur l'appareil (l'application s'ouvre sans réseau) et le pointage
+// (case cochée, quantité, liste) passe par une file gardée sur l'appareil, envoyée au retour du réseau. Les autres
+// modifications (profils, voyages, ajouts) demandent le réseau.
 
 export const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -41,10 +57,18 @@ interface Etat extends EtatServeur {
   /** Catalogue en service, fourni par le serveur : les listes sont générées avec. */
   catalogue: ArticleCatalogue[];
   erreur?: string;
+  /** Le serveur ne répond pas : l'écran montre la copie gardée sur l'appareil. */
+  horsLigne: boolean;
+  /** Pointages faits sur cet appareil et pas encore enregistrés par le serveur. */
+  pointagesEnAttente: number;
 
   charger: () => Promise<void>;
   /** Relit les données du serveur (modifications faites par les autres membres de la famille). */
   rafraichir: () => Promise<void>;
+  /** Envoie les pointages en attente (au retour du réseau). */
+  envoyerPointages: () => Promise<void>;
+  /** Déconnexion : efface aussi la copie gardée sur l'appareil. */
+  oublier: () => void;
   effacerErreur: () => void;
   importer: (donnees: EtatServeur) => Promise<void>;
 
@@ -80,6 +104,24 @@ export const useStore = create<Etat>()((set, get) => {
   let enAttente = 0;
   /** Augmente à chaque modification locale : une relecture partie avant est alors ignorée. */
   let generation = 0;
+  /** Pointages pas encore enregistrés par le serveur (copie gardée sur l'appareil). */
+  let filePointage: PointageEnAttente[] = lireFile();
+  let envoiEnCours = false;
+
+  const majFile = (f: PointageEnAttente[]) => {
+    filePointage = f;
+    sauverFile(f);
+    set({ pointagesEnAttente: f.length });
+  };
+  /** Les voyages du serveur, avec les pointages de cet appareil pas encore envoyés. */
+  const avecFile = (voyages: Voyage[]) => appliquerFile(voyages, filePointage, get().email);
+  const estReseau = (e: unknown) => e instanceof ErreurApi && e.statut === 0;
+
+  const deconnecte = () => {
+    effacerDonneesLocales();
+    filePointage = [];
+    set({ statut: 'deconnecte', profils: [], voyages: [], invitations: [], pointagesEnAttente: 0 });
+  };
 
   const charger = async () => {
     try {
@@ -89,22 +131,71 @@ export const useStore = create<Etat>()((set, get) => {
         api<Catalogue>('/catalogue'),
       ]);
       set({
-        ...etat,
+        profils: etat.profils,
+        voyages: avecFile(etat.voyages),
         email: moi.email,
         familleId: moi.familleId,
         role: moi.role,
         invitations: moi.invitations,
         catalogue: catalogue.articles,
         statut: 'pret',
+        horsLigne: false,
       });
+      if (filePointage.length) void envoyerPointages();
     } catch (e) {
-      if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte', profils: [], voyages: [] });
-      else
+      const locales = estReseau(e) ? lireDonnees() : undefined;
+      if (locales) {
+        set({ ...locales, voyages: avecFile(locales.voyages), statut: 'pret', horsLigne: true });
+      } else if (e instanceof ErreurApi && e.statut === 401) {
+        deconnecte();
+      } else {
         set({
           erreur: e instanceof Error ? e.message : 'Erreur',
           statut: get().statut === 'chargement' ? 'deconnecte' : get().statut,
         });
+      }
     }
+  };
+
+  /**
+   * Envoie la file des pointages, dans l'ordre, après les autres écritures. Réseau coupé : on s'arrête et on
+   * réessaiera (retour du réseau, relecture). Article ou voyage disparu entre-temps : le pointage est abandonné.
+   */
+  const envoyerPointages = async () => {
+    if (envoiEnCours) return;
+    envoiEnCours = true;
+    try {
+      await file;
+      while (filePointage.length) {
+        const e = filePointage[0];
+        try {
+          await api(`/voyages/${enc(e.voyageId)}/articles/${enc(e.articleId)}`, { methode: 'PATCH', corps: e.patch });
+          set({ horsLigne: false });
+        } catch (err) {
+          if (estReseau(err)) {
+            set({ horsLigne: true });
+            return;
+          }
+          if (err instanceof ErreurApi && err.statut === 401) {
+            set({ statut: 'deconnecte' });
+            return;
+          }
+          if (!(err instanceof ErreurApi && err.statut === 404)) {
+            set({ erreur: `Pointage non enregistré : ${err instanceof Error ? err.message : 'erreur'}` });
+          }
+        }
+        // Retirée seulement si elle n'a pas changé pendant l'envoi (sinon la nouvelle valeur part au tour suivant).
+        if (filePointage[0] === e) majFile(filePointage.slice(1));
+      }
+    } finally {
+      envoiEnCours = false;
+    }
+  };
+
+  const pointer = (voyageId: string, articleId: string, patch: PatchArticle) => {
+    generation++;
+    majFile(ajouterALaFile(filePointage, { voyageId, articleId, patch }));
+    void envoyerPointages();
   };
 
   /**
@@ -127,7 +218,9 @@ export const useStore = create<Etat>()((set, get) => {
           return;
         }
         set({
-          erreur: `Modification non enregistrée : ${e instanceof Error ? e.message : 'erreur'}. Données rechargées.`,
+          erreur: estReseau(e)
+            ? 'Pas de connexion : hors ligne, seul le pointage est possible. Modification annulée.'
+            : `Modification non enregistrée : ${e instanceof Error ? e.message : 'erreur'}. Données rechargées.`,
         });
         await charger();
       });
@@ -139,8 +232,8 @@ export const useStore = create<Etat>()((set, get) => {
     majVoyage(voyageId, (v) => ({ ...v, articles: f(v.articles) }));
   const majArticle = (voyageId: string, articleId: string, patch: Partial<ArticleVoyage>) =>
     majArticles(voyageId, (articles) => articles.map((a) => (a.id === articleId ? { ...a, ...patch } : a)));
-  const remplacerVoyage = (v: Voyage) => majVoyage(v.id, () => v);
-  const remplacerEtat = (etat: EtatServeur) => set(etat);
+  const remplacerVoyage = (v: Voyage) => majVoyage(v.id, () => avecFile([v])[0]);
+  const remplacerEtat = (etat: EtatServeur) => set({ profils: etat.profils, voyages: avecFile(etat.voyages) });
 
   /**
    * Relecture silencieuse. Ignorée si une écriture est en cours ou a eu lieu pendant la relecture : l'écran,
@@ -153,14 +246,18 @@ export const useStore = create<Etat>()((set, get) => {
       const [moi, etat] = await Promise.all([api<Moi>('/moi'), api<EtatServeur>('/etat')]);
       if (enAttente > 0 || generation !== depart) return;
       set((s) => ({
-        ...etat,
+        profils: etat.profils,
+        voyages: avecFile(etat.voyages),
         familleId: moi.familleId,
         role: moi.role,
         invitations: moi.invitations,
         revision: s.revision + 1,
+        horsLigne: false,
       }));
+      if (filePointage.length) void envoyerPointages();
     } catch (e) {
-      if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte' });
+      if (e instanceof ErreurApi && e.statut === 401) deconnecte();
+      else if (estReseau(e)) set({ horsLigne: true });
     }
   };
 
@@ -180,9 +277,13 @@ export const useStore = create<Etat>()((set, get) => {
     revision: 0,
     statut: 'chargement',
     catalogue: [],
+    horsLigne: false,
+    pointagesEnAttente: filePointage.length,
 
     charger,
     rafraichir,
+    envoyerPointages,
+    oublier: deconnecte,
     effacerErreur: () => set({ erreur: undefined }),
 
     importer: async (donnees) => {
@@ -252,26 +353,21 @@ export const useStore = create<Etat>()((set, get) => {
     },
 
     // Pointage : l'écran est déjà à jour, la réponse du serveur n'est pas réappliquée.
+    // Pointage (fonctionne hors ligne) : l'écran est déjà à jour, la réponse du serveur n'est pas réappliquée.
     changerStatut: (voyageId, articleId, statut) => {
       majArticle(voyageId, articleId, { statut, pointePar: get().email });
-      envoyer(() =>
-        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { statut } }),
-      );
+      pointer(voyageId, articleId, { statut });
     },
 
     changerQuantite: (voyageId, articleId, quantite) => {
       const q = Math.max(1, quantite);
       majArticle(voyageId, articleId, { quantite: q, ajuste: true });
-      envoyer(() =>
-        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { quantite: q } }),
-      );
+      pointer(voyageId, articleId, { quantite: q });
     },
 
     changerListe: (voyageId, articleId, liste) => {
       majArticle(voyageId, articleId, { liste, listeChoisie: true });
-      envoyer(() =>
-        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { liste } }),
-      );
+      pointer(voyageId, articleId, { liste });
     },
 
     // L'identifiant définitif est donné par le serveur : l'article provisoire est remplacé à la réponse.
@@ -287,7 +383,10 @@ export const useStore = create<Etat>()((set, get) => {
             methode: 'POST',
             corps: { nom, categorie, proprietaire, liste },
           }),
-        (cree) => majArticle(voyageId, provisoire, { id: cree.id }),
+        (cree) => {
+          majArticle(voyageId, provisoire, { id: cree.id });
+          majFile(renommerDansFile(filePointage, voyageId, provisoire, cree.id));
+        },
         true,
       );
     },
@@ -305,3 +404,17 @@ export const useStore = create<Etat>()((set, get) => {
     },
   };
 });
+
+// Copie des données sur l'appareil (pour s'ouvrir hors ligne), regroupée : au plus une écriture par seconde.
+if (typeof window !== 'undefined') {
+  let attente: ReturnType<typeof setTimeout> | undefined;
+  useStore.subscribe((s, avant) => {
+    if (s.statut !== 'pret' || !s.email) return;
+    if (s.profils === avant.profils && s.voyages === avant.voyages && s.catalogue === avant.catalogue) return;
+    clearTimeout(attente);
+    attente = setTimeout(() => {
+      const { email, familleId, profils, voyages, catalogue, statut } = useStore.getState();
+      if (statut === 'pret' && email) sauverDonnees({ email, familleId, profils, voyages, catalogue });
+    }, 1000);
+  });
+}

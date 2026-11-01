@@ -5,6 +5,16 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Tu as pris mon maillot ?',
   description: 'La liste de valise de chaque membre de la famille, adaptée au voyage, et le pointage avant de partir.',
+  applicationName: 'Maillot',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+  // iPhone : ouverture en plein écran depuis l'écran d'accueil.
+  appleWebApp: { capable: true, title: 'Maillot', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {

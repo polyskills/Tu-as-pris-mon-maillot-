@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, Users, X } from 'lucide-react';
+import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, Users, WifiOff, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
@@ -63,15 +63,43 @@ export function Coque({ children }: { children: ReactNode }) {
     const relire = () => {
       if (document.visibilityState === 'visible') void useStore.getState().rafraichir();
     };
+    // Retour du réseau : envoie le pointage fait hors ligne, puis relit.
+    const reseauRevenu = () => {
+      const { envoyerPointages, rafraichir } = useStore.getState();
+      void envoyerPointages().then(rafraichir);
+    };
     const minuterie = setInterval(relire, INTERVALLE_RELECTURE);
     document.addEventListener('visibilitychange', relire);
     window.addEventListener('focus', relire);
+    window.addEventListener('online', reseauRevenu);
     return () => {
       clearInterval(minuterie);
       document.removeEventListener('visibilitychange', relire);
       window.removeEventListener('focus', relire);
+      window.removeEventListener('online', reseauRevenu);
     };
   }, [statut]);
+
+  // Application installable et utilisable hors ligne (en production : en développement, le cache gênerait).
+  const voyagesIds = useStore((s) => s.voyages.map((v) => v.id).join(','));
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
+    void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  }, []);
+  // Garde les pages des voyages, pour pointer hors ligne même dans un voyage pas encore ouvert sur cet appareil.
+  useEffect(() => {
+    if (statut !== 'pret' || !navigator.onLine || !('serviceWorker' in navigator)) return;
+    if (process.env.NODE_ENV !== 'production') return;
+    const urls = [
+      '/',
+      '/famille',
+      ...voyagesIds
+        .split(',')
+        .filter(Boolean)
+        .map((id) => `/voyage/${id}`),
+    ];
+    void navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ type: 'prechauffer', urls }));
+  }, [statut, voyagesIds]);
 
   useEffect(() => {
     if (statut === 'deconnecte' && !surConnexion) router.replace('/connexion');
@@ -86,15 +114,18 @@ export function Coque({ children }: { children: ReactNode }) {
   const navigation = role ? [...NAVIGATION, ADMINISTRATION] : NAVIGATION;
 
   const seDeconnecter = async () => {
+    const enAttente = useStore.getState().pointagesEnAttente;
+    if (
+      enAttente > 0 &&
+      !confirm(
+        `${enAttente} pointage(s) fait(s) hors ligne ne sont pas encore enregistrés et seront perdus. Se déconnecter ?`,
+      )
+    ) {
+      return;
+    }
     await deconnecter().catch(() => undefined);
-    useStore.setState({
-      statut: 'deconnecte',
-      profils: [],
-      voyages: [],
-      invitations: [],
-      email: undefined,
-      role: undefined,
-    });
+    useStore.getState().oublier();
+    useStore.setState({ email: undefined, role: undefined, familleId: undefined });
   };
 
   return (
@@ -131,6 +162,7 @@ export function Coque({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
+        <BandeauHorsLigne />
         <InvitationsRecues />
         <RepriseNavigateur />
         {children}
@@ -186,6 +218,26 @@ function MessageErreur() {
 const INTERVALLE_RELECTURE = 30_000;
 /** Plusieurs changements reçus coup sur coup ne déclenchent qu'une relecture. */
 const DELAI_REGROUPEMENT = 300;
+
+/** Hors connexion : on peut continuer à cocher, l'envoi se fera au retour du réseau. */
+function BandeauHorsLigne() {
+  const horsLigne = useStore((s) => s.horsLigne);
+  const enAttente = useStore((s) => s.pointagesEnAttente);
+  if (!horsLigne) return null;
+  return (
+    <div role="status" className="mx-auto mt-4 flex w-full max-w-6xl items-center gap-3 px-4 md:px-8">
+      <p className="flex flex-1 items-center gap-2 rounded-2xl border border-bordure bg-carte px-4 py-3 text-sm">
+        <WifiOff size={18} className="shrink-0 text-discret" />
+        <span>
+          <strong>Hors connexion.</strong> Tu peux continuer à cocher la valise
+          {enAttente > 0
+            ? ` : ${enAttente} modification${enAttente > 1 ? 's' : ''} ${enAttente > 1 ? 'seront envoyées' : 'sera envoyée'} au retour du réseau.`
+            : ', tout sera envoyé au retour du réseau.'}
+        </span>
+      </p>
+    </div>
+  );
+}
 
 /** Invitations à rejoindre la famille d'un autre compte : accepter ou refuser. */
 function InvitationsRecues() {
