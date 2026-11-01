@@ -1,5 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { confirmer } from '../../components/confirmer';
+import { revenir } from '../../components/navigation';
 import { ReactNode, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { aujourdhuiIso, ChoixDate, dateLongue, plusJours } from '../../components/ChoixDate';
@@ -72,7 +73,7 @@ export default function EditionVoyage() {
     const params = { ...p, nom: p.nom.trim() };
     if (existant) {
       modifier(existant.id, params);
-      router.back();
+      revenir(`/voyage/${existant.id}`);
     } else {
       router.replace(`/voyage/${creer(params)}`);
     }
@@ -81,7 +82,7 @@ export default function EditionVoyage() {
   const confirmerSuppression = () =>
     confirmer(`Supprimer « ${existant?.nom} » ?`, 'La liste et le pointage seront perdus.', () => {
       supprimer(existant!.id);
-      router.dismissAll();
+      router.replace('/');
     });
 
   const suivant = () => (etape < ETAPES.length - 1 ? setEtape(etape + 1) : valider());

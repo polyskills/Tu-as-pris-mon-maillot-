@@ -1,5 +1,6 @@
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { confirmer } from '../../components/confirmer';
+import { revenir } from '../../components/navigation';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
@@ -75,7 +76,7 @@ export default function EditionProfil() {
       articlesPerso,
     };
     enregistrer(profil);
-    router.back();
+    revenir('/famille');
   };
 
   const ajouterArticlePerso = () => {
@@ -88,7 +89,7 @@ export default function EditionProfil() {
   const confirmerSuppression = () =>
     confirmer(`Supprimer ${existant?.prenom} ?`, 'Ses articles seront retirés des voyages.', () => {
       supprimer(existant!.id);
-      router.back();
+      revenir('/famille');
     });
 
   return (
