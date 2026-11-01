@@ -17,8 +17,13 @@ export const derniersLiens = new Map<string, string>();
 export async function envoyerLienConnexion(email: string, url: string) {
   derniersLiens.set(email, url);
   if (!transport) {
-    // Développement : pas de serveur d'e-mails, le lien est affiché dans les logs.
-    journal.info({ email, url }, 'Lien de connexion (SMTP non configuré)');
+    // Sans serveur d'e-mails : le lien n'est écrit dans les journaux qu'en développement, ou si on l'a demandé
+    // explicitement (site DEV protégé). Il donne accès au compte : jamais en production.
+    if (env.NODE_ENV !== 'production' || env.LIENS_DANS_LES_JOURNAUX === 'oui') {
+      journal.info({ email, url }, 'Lien de connexion (SMTP non configuré)');
+    } else {
+      journal.error({ email }, 'Lien de connexion non envoyé : SMTP non configuré');
+    }
     return;
   }
   await transport.sendMail({

@@ -1,80 +1,90 @@
-# Déploiement sur le VPS (Debian 12)
+# Déploiement avec Polytools Admin v2
 
-Cible : `https://voyage.adaptools.fr`, sur le même VPS que Polytools, mais cloisonné :
-utilisateur Linux, dossier, base et utilisateur MariaDB dédiés.
+L'outil est un site (« slug ») comme les autres pour le kit : un compte `app-voyage`, une base `voyage_db`,
+un service `polytools-voyage.service`, un vhost Nginx, des releases avec retour arrière automatique.
+Projet **PROD + DEV** : `voyage` (`voyage.adaptools.fr`, branche `main`) et `voyage-dev` (protégé, branche `develop`).
 
-| Élément | Valeur |
+## Ce que l'application respecte (contrat du kit)
+
+| Exigence du kit | Dans l'outil |
 |---|---|
-| Dossier | `/srv/maillot` |
-| Utilisateur Linux | `maillot` (sans droits sudo) |
-| Base | `maillot` (MariaDB 10.11), utilisateur `maillot` avec droits sur cette base seulement |
-| Interface | Next.js sur `127.0.0.1:3100` |
-| API | Express sur `127.0.0.1:4000` |
-| Entrée publique | Nginx + certificat Let's Encrypt |
+| Écouter sur `HOST` / `PORT` | `apps/api/src/server.ts` : **un seul processus** sert l'API (`/api`) et l'interface Next.js |
+| Configuration dans `process.env` | `apps/api/src/env.ts` (validée au démarrage) ; aucun fichier `.env` en production |
+| Pas d'en-têtes X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS | Helmet limité à `/api`, ces 4 en-têtes désactivés |
+| Journaux sur la sortie standard | Pino ; ni paramètres d'URL ni en-têtes (cookies) journalisés |
+| `pnpm-lock.yaml` versionné, scripts d'installation autorisés | `pnpm-workspace.yaml`, clé `allowBuilds` |
+| Pas de chemin serveur en dur, pas de fichier persistant | Aucun fichier écrit hors de la base |
 
-## 1. Prérequis (une fois, avec sudo)
-
-```bash
-# DNS : un enregistrement A « voyage.adaptools.fr » vers l'IP du VPS (chez le registrar d'adaptools.fr).
-
-# Mémoire d'échange de 2 Go (le VPS n'en a pas : sécurité pendant les builds)
-sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
-# Utilisateur dédié et dossier
-sudo adduser --system --group --home /srv/maillot --shell /bin/bash maillot
-```
-
-## 2. Base de données
+## 1. Création du projet (une fois)
 
 ```bash
-sudo mariadb <<'SQL'
-CREATE DATABASE maillot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'maillot'@'localhost' IDENTIFIED BY 'MOT_DE_PASSE_FORT';
-GRANT ALL PRIVILEGES ON maillot.* TO 'maillot'@'localhost';
-FLUSH PRIVILEGES;
-SQL
+sudo bin/21-init-project.sh            # projet « voyage » → slugs voyage et voyage-dev, affiche 2 Deploy keys
+# GitHub → polyskills/Tu-as-pris-mon-maillot- → Settings → Deploy keys : ajouter les deux, SANS droit d'écriture
+sudo bin/23-set-repo.sh voyage
+sudo bin/23-set-repo.sh voyage-dev
+# DNS : enregistrements A voyage.adaptools.fr et (nom DEV choisi) vers l'IP du VPS
+sudo bin/30-enable-https.sh voyage
+sudo bin/30-enable-https.sh voyage-dev
 ```
 
-## 3. Code, configuration, build
+## 2. Registre : `/etc/polytools/slugs/voyage.conf` (idem `voyage-dev.conf`)
 
 ```bash
-sudo -iu maillot
-git clone -b claude/v1-locale https://github.com/polyskills/Tu-as-pris-mon-maillot-.git /srv/maillot
-cd /srv/maillot
-cp apps/api/.env.example apps/api/.env   # puis éditer : DATABASE_URL, PUBLIC_URL=https://voyage.adaptools.fr,
-                                         # BETTER_AUTH_SECRET (openssl rand -base64 32), SMTP_*
-npm ci
-npm run build
-npm run migrate
+START_CMD="node apps/api/dist/server.mjs"
+GENERATE_CMD="pnpm --filter @maillot/api exec prisma generate --schema prisma/schema.prisma"
+TEST_CMD="pnpm --filter @maillot/domain test"
+MIGRATE_CMD="pnpm --filter @maillot/api exec prisma migrate deploy --schema prisma/schema.prisma"
+BUILD_CMD="pnpm --filter @maillot/web build && pnpm --filter @maillot/api build"
+MEM_MAX="768M"
+HEALTH_PATH="/api/sante"
+HEALTH_MATCH='"ok":true'
+NOLOG_REGEX="^/api/auth/magic-link/verify"
+MAX_BODY="2m"
+SHARED_LINKS=""
 ```
 
-## 4. Lancement (PM2, sous l'utilisateur maillot)
+`INSTALL_CMD` reste vide (installation par défaut du kit : `pnpm install --frozen-lockfile`).
+`SHARED_LINKS` est vide : l'outil n'écrit aucun fichier. Puis : `sudo bin/26-apply-slug.sh voyage`.
+
+## 3. Secrets : `/var/www/voyage/shared/app.env`
+
+`PORT`, `HOST` et `DATABASE_URL` viennent du kit. À ajouter :
 
 ```bash
-pm2 start deploy/ecosystem.config.cjs
-pm2 save
-pm2 startup   # affiche une commande sudo à lancer une fois pour le redémarrage automatique
+PUBLIC_URL="https://voyage.adaptools.fr"
+BETTER_AUTH_SECRET="…"                      # openssl rand -base64 32 (différent en DEV et en PROD)
+SMTP_HOST="…"
+SMTP_PORT=587
+SMTP_USER="…"
+SMTP_PASSWORD="…"
+MAIL_FROM="Tu as pris mon maillot <no-reply@adaptools.fr>"
 ```
 
-## 5. Nginx et HTTPS (avec sudo)
+Uniquement sur **voyage-dev**, tant qu'aucun SMTP n'est configuré : `LIENS_DANS_LES_JOURNAUX="oui"` écrit le lien de
+connexion dans les journaux (`51-logs.sh voyage-dev`). **Jamais en PROD** : ce lien donne accès au compte.
 
 ```bash
-sudo cp deploy/nginx-voyage.adaptools.fr.conf /etc/nginx/sites-available/voyage.adaptools.fr
-sudo ln -s /etc/nginx/sites-available/voyage.adaptools.fr /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d voyage.adaptools.fr
+sudo -u app-voyage nano /var/www/voyage/shared/app.env
 ```
 
-## Mise à jour
+## 4. Déployer
 
 ```bash
-sudo -iu maillot && cd /srv/maillot
-git pull && npm ci && npm run build && npm run migrate
-pm2 reload maillot-web maillot-api
+sudo bin/60-deploy.sh voyage-dev       # branche develop
+sudo bin/62-promote.sh voyage          # Pull Request develop → main, puis déploiement PROD
 ```
 
-## Sauvegardes (à mettre en place avant d'ouvrir au public)
+Le kit enchaîne : dump de la base, release, `pnpm install --frozen-lockfile`, génération Prisma, tests du moteur,
+migrations, build, bascule, contrôle de santé sur `/api/sante`, retour arrière automatique en cas d'échec.
 
-Chaque nuit, `mariadb-dump` de la base `maillot`, chiffré, puis envoyé **hors du VPS** (stockage S3 ou autre serveur).
-Tester une restauration de temps en temps.
+## Vérifié en simulation (copie propre du dépôt, MariaDB 10.11)
+
+Installation figée sans `NODE_ENV`, génération, tests, migrations, build, puis démarrage avec les seules variables
+d'environnement (`NODE_ENV=production`, `HOST`, `PORT`, `DATABASE_URL`, contenu de `app.env`) :
+santé OK, pages servies par le même processus, connexion par lien complète, aucun jeton ni cookie dans les journaux,
+environ 210 Mo de mémoire.
+
+## Points à confirmer sur le serveur
+
+- Le kit v2 vise **Debian 13** ; le VPS actuel est en Debian 12.
+- Version de pnpm installée par le kit : le dépôt déclare `pnpm@11.28.10` (`packageManager`).

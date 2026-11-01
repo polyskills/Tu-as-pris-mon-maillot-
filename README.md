@@ -7,31 +7,31 @@ Architecture et choix techniques : [docs/architecture.md](docs/architecture.md).
 
 ## Lancer en local
 
-Prérequis : Node.js 22.13 ou plus récent.
+Prérequis : Node.js 22.13 ou plus récent, pnpm 11 (`corepack enable pnpm`).
 
 ```bash
-npm install
-npm run dev          # interface : http://localhost:3000
+pnpm install
+pnpm dev             # interface : http://localhost:3000
 ```
 
 Pour l'API (facultatif tant que l'interface n'y est pas branchée) : MariaDB 10.11 ou MySQL 8.4, puis
 
 ```bash
 cp apps/api/.env.example apps/api/.env   # adapter DATABASE_URL et BETTER_AUTH_SECRET
-npm run migrate
-npm run dev:api      # http://127.0.0.1:4000, /api relayé par l'interface en développement
+pnpm migrate
+pnpm dev:api         # http://127.0.0.1:4000, /api relayé par l'interface en développement
 ```
 
-Déploiement sur le VPS : [deploy/README.md](deploy/README.md).
+Déploiement avec le kit Polytools Admin v2 : [deploy/README.md](deploy/README.md).
 
 Autres commandes (depuis la racine) :
 
 ```bash
-npm test             # tests du moteur et de l'API (l'API demande une base de test, cf. apps/api/.env.test)
-npm run typecheck
-npm run lint
-npm run build        # build de production de l'interface
-npm run catalogue    # régénère docs/catalogue.md après une modification du catalogue
+pnpm test            # tests du moteur et de l'API (l'API demande une base de test, cf. apps/api/.env.test)
+pnpm typecheck
+pnpm lint
+pnpm build           # build de production (interface + API)
+pnpm catalogue       # régénère docs/catalogue.md après une modification du catalogue
 ```
 
 Pour l'instant, les données restent dans le navigateur utilisé (en attendant l'API et les comptes).

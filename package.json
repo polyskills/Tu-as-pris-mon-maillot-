@@ -1,26 +1,23 @@
 {
   "name": "tu-as-pris-mon-maillot",
   "private": true,
-  "workspaces": [
-    "shared/*",
-    "apps/*"
-  ],
   "scripts": {
-    "dev": "npm run dev -w @maillot/web",
-    "build": "npm run build -w @maillot/web && npm run build -w @maillot/api",
-    "start": "npm run start -w @maillot/web",
-    "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "dev": "pnpm --filter @maillot/web dev",
+    "dev:api": "pnpm --filter @maillot/api dev",
+    "build": "pnpm --filter @maillot/web build && pnpm --filter @maillot/api build",
+    "start": "node apps/api/dist/server.mjs",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
     "format": "prettier --write .",
-    "catalogue": "npm run catalogue -w @maillot/domain",
-    "dev:api": "npm run dev -w @maillot/api",
-    "migrate": "npm run migrate -w @maillot/api"
+    "migrate": "pnpm --filter @maillot/api migrate",
+    "catalogue": "pnpm --filter @maillot/domain catalogue"
   },
   "devDependencies": {
     "prettier": "^3.6.2"
   },
   "engines": {
     "node": ">=22.13"
-  }
+  },
+  "packageManager": "pnpm@11.28.10"
 }
