@@ -23,6 +23,7 @@
     "@types/react": "~19.3.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"
   },
@@ -33,7 +34,8 @@
     "web": "expo start --web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "catalogue": "tsx scripts/catalogue-lisible.ts"
   },
   "private": true
 }

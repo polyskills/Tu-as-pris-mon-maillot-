@@ -10,6 +10,7 @@ npx expo start      # puis scanner le QR code avec l'appli Expo Go
 npm test            # tests du moteur de règles
 npm run typecheck
 npm run lint
+npm run catalogue   # régénère docs/catalogue.md après une modification du catalogue
 ```
 
 ## Tester dans un navigateur (Mac ou PC)
@@ -31,6 +32,7 @@ Différences avec le téléphone : la date de départ se saisit au format AAAA-M
 | `src/domain/catalogue.ts` | Base d'articles (214) et leurs règles « on prend X si… » : mis d'office, en suggestion, achetables sur place ou en check-list voiture |
 | `src/domain/generer.ts` | Moteur : génération, suggestions, quantités, fusion après modification, progression |
 | `docs/tri-base.md` | Décisions du tri de la base, catégorie par catégorie |
+| `docs/catalogue.md` | Tout le catalogue et ses règles en français, généré par `npm run catalogue` |
 | `src/store/` | État de l'appli (zustand), stocké en local (SQLite) |
 | `src/app/` | Écrans (Expo Router) : accueil, famille, profil, questionnaire voyage, valise |
 | `src/components/` | Composants d'interface communs |

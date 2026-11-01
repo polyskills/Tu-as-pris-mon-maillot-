@@ -57,6 +57,11 @@ const FROID: Condition[] = [{ climats: ['froid'] }, { destinations: ['ski'] }];
 const NAGE: Condition[] = [{ destinations: ['plage'] }, { activites: ['baignade', 'plongee'] }];
 /** Au ski, à partir de 3 ans : on porte l'équipement de ski. */
 const SKIEUR: Condition = { destinations: ['ski'], ages: GRANDS };
+/** Froid sans ski, ou bébé au ski (les skieurs ont gants de ski et casque). */
+const HORS_SKI_OU_BEBE: Condition[] = [
+  { climats: ['froid'], sauf: SKIEUR },
+  { destinations: ['ski'], ages: ['bebe'] },
+];
 const LOGEMENT_A_EQUIPER: Condition = { hebergements: ['location', 'mobil-home'] };
 const CUISINE_SUR_PLACE: Condition = { hebergements: ['location', 'mobil-home', 'tente'] };
 const TENTE: Condition = { hebergements: ['tente'] };
@@ -154,18 +159,8 @@ export const CATALOGUE: ArticleCatalogue[] = [
     { destinations: ['plage', 'montagne'] },
   ]),
   // Au ski, les skieurs ont leurs gants de ski et leur casque.
-  perso(
-    'bonnet',
-    'Bonnet',
-    'vetements',
-    FROID.map((c) => ({ ...c, sauf: SKIEUR })),
-  ),
-  perso(
-    'gants',
-    'Gants',
-    'vetements',
-    FROID.map((c) => ({ ...c, sauf: SKIEUR })),
-  ),
+  perso('bonnet', 'Bonnet', 'vetements', HORS_SKI_OU_BEBE),
+  perso('gants', 'Gants', 'vetements', HORS_SKI_OU_BEBE),
   perso('echarpe', 'Écharpe / tour de cou', 'vetements', FROID),
   perso('collant', 'Collants / sous-couches thermiques', 'vetements', FROID, parJour(0.3, 1, 3)),
   suggestion(perso('ceinture', 'Ceinture', 'vetements', PLUS_DE_12)),
