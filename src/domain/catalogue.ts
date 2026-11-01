@@ -373,7 +373,18 @@ export const CATALOGUE: ArticleCatalogue[] = [
 
   // --- Plage ---
   perso('maillot', 'Maillot de bain', 'plage', NAGE, fixe(2)),
-  perso('serviette-plage', 'Serviette de plage', 'plage', NAGE),
+  // À l'hôtel, les serviettes de piscine sont souvent fournies : suggestion seulement, sauf à la plage.
+  perso('serviette-plage', 'Serviette de baignade', 'plage', [
+    { destinations: ['plage'] },
+    { activites: ['baignade', 'plongee'], sauf: { hebergements: ['hotel'] } },
+  ]),
+  suggestion(
+    perso('serviette-plage-s', 'Serviette de baignade', 'plage', {
+      activites: ['baignade', 'plongee'],
+      hebergements: ['hotel'],
+      sauf: { destinations: ['plage'] },
+    }),
+  ),
   perso('tshirt-anti-uv', 'T-shirt anti-UV', 'plage', { destinations: ['plage'], ages: PETITS }),
   perso(
     'brassards',

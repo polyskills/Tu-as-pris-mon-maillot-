@@ -214,3 +214,11 @@ Champ facultatif sur le profil : Fille / femme, Garçon / homme, Non précisé (
 | Shorts | Filles et femmes : « Shorts » (0,3 par jour, 4 max). Autres : « Shorts / bermudas » (0,5 par jour, 6 max) |
 | Habitudes « Maquillage », « Protections périodiques » | Pas proposées à un garçon ou un homme (il ajoute l'article dans ses articles perso s'il en a besoin) |
 | Habitude « Rasage » | Proposée à tous |
+
+## Baignade sans plage (ajout, validé)
+
+| Élément | Règle |
+|---|---|
+| Activité « Baignade » | Renommée « Baignade (piscine, lac, rivière) » |
+| Maillot de bain | Plage, ou activité baignade / plongée |
+| Serviette de baignade (ex-« Serviette de plage ») | Plage, ou baignade / plongée hors hôtel ; à l'hôtel sans plage : suggestion (serviettes souvent fournies) |

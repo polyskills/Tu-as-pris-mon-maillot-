@@ -364,3 +364,32 @@ describe('sexe', () => {
     expect(habitudesProposees('adulte')).toContain('maquillage');
   });
 });
+
+describe('baignade sans plage', () => {
+  const seul = [profil('m', 1975)];
+  const ville = { ...plage, destinations: ['ville' as const], activites: ['baignade' as const], participants: ['m'] };
+  const nomsDe = (v: ParametresVoyage) => noms(genererArticles(v, seul, CATALOGUE));
+  const suggestionsDe = (v: ParametresVoyage) =>
+    noms(genererSuggestions(v, seul, CATALOGUE, genererArticles(v, seul, CATALOGUE)));
+
+  it('ajoute maillot et serviette de baignade en location', () => {
+    expect(nomsDe(ville)).toContain('Maillot de bain');
+    expect(nomsDe(ville)).toContain('Serviette de baignade');
+  });
+
+  it("met la serviette en suggestion à l'hôtel, sauf à la plage", () => {
+    const hotel = { ...ville, hebergement: 'hotel' as const };
+    expect(nomsDe(hotel)).toContain('Maillot de bain');
+    expect(nomsDe(hotel)).not.toContain('Serviette de baignade');
+    expect(suggestionsDe(hotel)).toContain('Serviette de baignade');
+    const hotelPlage = { ...hotel, destinations: ['plage' as const] };
+    expect(nomsDe(hotelPlage)).toContain('Serviette de baignade');
+    expect(suggestionsDe(hotelPlage)).not.toContain('Serviette de baignade');
+  });
+
+  it('sans plage ni baignade, ni maillot ni serviette', () => {
+    const sec = { ...ville, activites: [] };
+    expect(nomsDe(sec)).not.toContain('Maillot de bain');
+    expect(nomsDe(sec)).not.toContain('Serviette de baignade');
+  });
+});

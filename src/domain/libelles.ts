@@ -49,7 +49,7 @@ export const HEBERGEMENTS: Record<Hebergement, string> = {
 };
 
 export const ACTIVITES: Record<Activite, string> = {
-  baignade: 'Baignade',
+  baignade: 'Baignade (piscine, lac, rivière)',
   randonnee: 'Randonnée',
   velo: 'Vélo',
   sport: 'Sport',
