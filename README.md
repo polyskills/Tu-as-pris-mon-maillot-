@@ -9,18 +9,18 @@ Architecture et choix techniques : [docs/architecture.md](docs/architecture.md).
 
 Prérequis : Node.js 22.13 ou plus récent, pnpm 11 (`corepack enable pnpm`).
 
+Prérequis supplémentaires : MariaDB 10.11 (ou MySQL 8.4) et Mailpit (capture des e-mails de connexion).
+
 ```bash
 pnpm install
-pnpm dev             # interface : http://localhost:3000
-```
-
-Pour l'API (facultatif tant que l'interface n'y est pas branchée) : MariaDB 10.11 ou MySQL 8.4, puis
-
-```bash
 cp apps/api/.env.example apps/api/.env   # adapter DATABASE_URL et BETTER_AUTH_SECRET
 pnpm migrate
-pnpm dev:api         # http://127.0.0.1:4000, /api relayé par l'interface en développement
+mailpit                                  # e-mails lisibles sur http://127.0.0.1:8025
+pnpm dev:api                             # API : http://127.0.0.1:4000
+pnpm dev                                 # interface : http://localhost:3000 (/api relayé vers l'API)
 ```
+
+Connexion : saisir une adresse, ouvrir l'e-mail reçu dans Mailpit, cliquer sur le lien.
 
 Déploiement avec le kit Polytools Admin v2 : [deploy/README.md](deploy/README.md).
 
@@ -34,15 +34,13 @@ pnpm build           # build de production (interface + API)
 pnpm catalogue       # régénère docs/catalogue.md après une modification du catalogue
 ```
 
-Pour l'instant, les données restent dans le navigateur utilisé (en attendant l'API et les comptes).
-
 ## Organisation du code
 
 | Dossier | Contenu |
 |---|---|
 | `apps/web/src/app/` | Écrans (Next.js) : accueil, famille, profil, questionnaire voyage, valise |
 | `apps/web/src/components/` | Mise en page responsive, composants d'interface, questionnaire |
-| `apps/web/src/store/` | État de l'appli (Zustand), stocké dans le navigateur |
+| `apps/web/src/store/` | État de l'appli (Zustand) : mise à jour immédiate de l'écran, puis enregistrement via l'API |
 | `apps/api/src/` | API : comptes, routes, accès aux données (`donnees.ts`), validation (`validation.ts`) |
 | `apps/api/prisma/` | Schéma de la base et migrations |
 | `shared/domain/src/types.ts` | Modèle : profils, voyages, articles, conditions |

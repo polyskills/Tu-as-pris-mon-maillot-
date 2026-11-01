@@ -12,17 +12,25 @@ import {
   Statut,
   Voyage,
 } from '@maillot/domain';
-import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { api, ErreurApi } from '@/lib/api';
 
-// En attendant l'API : les données restent dans le navigateur (localStorage).
+// Les données vivent sur le serveur. Chaque action met d'abord l'écran à jour (le pointage reste instantané),
+// puis l'enregistre via l'API. Les écritures partent dans l'ordre, une à la fois ; en cas d'échec, on recharge
+// l'état du serveur et on affiche l'erreur.
 
 export const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-interface Etat {
-  profils: Profil[];
-  voyages: Voyage[];
+type EtatServeur = { profils: Profil[]; voyages: Voyage[] };
+
+interface Etat extends EtatServeur {
+  statut: 'chargement' | 'deconnecte' | 'pret';
+  email?: string;
+  erreur?: string;
+
+  charger: () => Promise<void>;
+  effacerErreur: () => void;
+  importer: (donnees: EtatServeur) => Promise<void>;
 
   enregistrerProfil: (p: Profil) => void;
   supprimerProfil: (id: string) => void;
@@ -44,107 +52,173 @@ const regenerer = (v: Voyage, profils: Profil[]): Voyage => ({
   articles: fusionner(v.articles, genererArticles(v, profils, CATALOGUE), v.participants),
 });
 
-export const useStore = create<Etat>()(
-  persist(
-    (set) => {
-      const majArticles = (voyageId: string, f: (articles: ArticleVoyage[]) => ArticleVoyage[]) =>
-        set((s) => ({
-          voyages: s.voyages.map((v) => (v.id === voyageId ? { ...v, articles: f(v.articles) } : v)),
-        }));
-      const majArticle = (voyageId: string, articleId: string, patch: Partial<ArticleVoyage>) =>
-        majArticles(voyageId, (articles) => articles.map((a) => (a.id === articleId ? { ...a, ...patch } : a)));
+const enc = encodeURIComponent;
 
-      return {
-        profils: [],
-        voyages: [],
+export const useStore = create<Etat>()((set, get) => {
+  // File d'attente des écritures : une à la fois, dans l'ordre des clics.
+  let file: Promise<unknown> = Promise.resolve();
+  let enAttente = 0;
 
-        // Un profil modifié met à jour les voyages auxquels il participe, sans perdre le pointage.
-        enregistrerProfil: (p) =>
-          set((s) => {
-            const existe = s.profils.some((x) => x.id === p.id);
-            const profils = existe ? s.profils.map((x) => (x.id === p.id ? p : x)) : [...s.profils, p];
-            const voyages = s.voyages.map((v) => (v.participants.includes(p.id) ? regenerer(v, profils) : v));
-            return { profils, voyages };
-          }),
+  const charger = async () => {
+    try {
+      const [moi, etat] = await Promise.all([api<{ email: string }>('/moi'), api<EtatServeur>('/etat')]);
+      set({ ...etat, email: moi.email, statut: 'pret' });
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte', profils: [], voyages: [] });
+      else
+        set({
+          erreur: e instanceof Error ? e.message : 'Erreur',
+          statut: get().statut === 'chargement' ? 'deconnecte' : get().statut,
+        });
+    }
+  };
 
-        supprimerProfil: (id) =>
-          set((s) => {
-            const profils = s.profils.filter((p) => p.id !== id);
-            const voyages = s.voyages.map((v) =>
-              v.participants.includes(id)
-                ? regenerer({ ...v, participants: v.participants.filter((x) => x !== id) }, profils)
-                : v,
-            );
-            return { profils, voyages };
-          }),
+  /**
+   * Envoie une écriture au serveur après les précédentes. `appliquer` reçoit la réponse : par défaut, il n'est
+   * appelé que si plus aucune écriture n'attend (sinon l'écran, déjà à jour, reviendrait brièvement en arrière).
+   */
+  const envoyer = <T>(appel: () => Promise<T>, appliquer?: (reponse: T) => void, toujours = false) => {
+    enAttente++;
+    file = file
+      .then(appel)
+      .then((reponse) => {
+        enAttente--;
+        if (appliquer && (toujours || enAttente === 0)) appliquer(reponse);
+      })
+      .catch(async (e) => {
+        enAttente--;
+        if (e instanceof ErreurApi && e.statut === 401) {
+          set({ statut: 'deconnecte' });
+          return;
+        }
+        set({
+          erreur: `Modification non enregistrée : ${e instanceof Error ? e.message : 'erreur'}. Données rechargées.`,
+        });
+        await charger();
+      });
+  };
 
-        creerVoyage: (params) => {
-          const id = nouvelId();
-          set((s) => ({
-            voyages: [
-              {
-                ...params,
-                id,
-                creeLe: new Date().toISOString(),
-                articles: genererArticles(params, s.profils, CATALOGUE),
-              },
-              ...s.voyages,
-            ],
-          }));
-          return id;
-        },
+  const majVoyage = (voyageId: string, f: (v: Voyage) => Voyage) =>
+    set((s) => ({ voyages: s.voyages.map((v) => (v.id === voyageId ? f(v) : v)) }));
+  const majArticles = (voyageId: string, f: (articles: ArticleVoyage[]) => ArticleVoyage[]) =>
+    majVoyage(voyageId, (v) => ({ ...v, articles: f(v.articles) }));
+  const majArticle = (voyageId: string, articleId: string, patch: Partial<ArticleVoyage>) =>
+    majArticles(voyageId, (articles) => articles.map((a) => (a.id === articleId ? { ...a, ...patch } : a)));
+  const remplacerVoyage = (v: Voyage) => majVoyage(v.id, () => v);
+  const remplacerEtat = (etat: EtatServeur) => set(etat);
 
-        modifierVoyage: (id, params) =>
-          set((s) => ({
-            voyages: s.voyages.map((v) => (v.id === id ? regenerer({ ...v, ...params }, s.profils) : v)),
-          })),
+  return {
+    profils: [],
+    voyages: [],
+    statut: 'chargement',
 
-        supprimerVoyage: (id) => set((s) => ({ voyages: s.voyages.filter((v) => v.id !== id) })),
+    charger,
+    effacerErreur: () => set({ erreur: undefined }),
 
-        changerStatut: (voyageId, articleId, statut) => majArticle(voyageId, articleId, { statut }),
-
-        changerQuantite: (voyageId, articleId, quantite) =>
-          majArticle(voyageId, articleId, { quantite: Math.max(1, quantite), ajuste: true }),
-
-        ajouterArticle: (voyageId, nom, categorie, proprietaire, liste = 'valise') =>
-          majArticles(voyageId, (articles) => [
-            ...articles,
-            {
-              id: `ajout-${nouvelId()}`,
-              nom,
-              categorie,
-              proprietaire,
-              quantite: 1,
-              statut: 'a-prendre',
-              liste,
-              origine: 'ajout',
-            },
-          ]),
-
-        ajouterSuggestion: (voyageId, article) =>
-          majArticles(voyageId, (articles) =>
-            articles.some((a) => a.id === article.id) ? articles : [...articles, { ...article, origine: 'suggestion' }],
-          ),
-
-        changerListe: (voyageId, articleId, liste) => majArticle(voyageId, articleId, { liste, listeChoisie: true }),
-
-        supprimerArticle: (voyageId, articleId) =>
-          majArticles(voyageId, (articles) => articles.filter((a) => a.id !== articleId)),
-      };
+    importer: async (donnees) => {
+      const etat = await api<EtatServeur>('/import', { methode: 'POST', corps: donnees });
+      set(etat);
     },
-    {
-      name: 'maillot',
-      version: 2,
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
 
-/** Vrai une fois les données du navigateur chargées (évite d'afficher un écran vide au premier rendu). */
-export function useHydrate() {
-  return useSyncExternalStore(
-    (cb) => useStore.persist.onFinishHydration(cb),
-    () => useStore.persist.hasHydrated(),
-    () => false,
-  );
-}
+    // Un profil modifié met à jour les voyages auxquels il participe, sans perdre le pointage.
+    enregistrerProfil: (p) => {
+      set((s) => {
+        const existe = s.profils.some((x) => x.id === p.id);
+        const profils = existe ? s.profils.map((x) => (x.id === p.id ? p : x)) : [...s.profils, p];
+        const voyages = s.voyages.map((v) => (v.participants.includes(p.id) ? regenerer(v, profils) : v));
+        return { profils, voyages };
+      });
+      envoyer(() => api<EtatServeur>(`/profils/${enc(p.id)}`, { methode: 'PUT', corps: p }), remplacerEtat);
+    },
+
+    supprimerProfil: (id) => {
+      set((s) => {
+        const profils = s.profils.filter((p) => p.id !== id);
+        const voyages = s.voyages.map((v) =>
+          v.participants.includes(id)
+            ? regenerer({ ...v, participants: v.participants.filter((x) => x !== id) }, profils)
+            : v,
+        );
+        return { profils, voyages };
+      });
+      envoyer(() => api<EtatServeur>(`/profils/${enc(id)}`, { methode: 'DELETE' }), remplacerEtat);
+    },
+
+    creerVoyage: (params) => {
+      const id = nouvelId();
+      set((s) => ({
+        voyages: [
+          { ...params, id, creeLe: new Date().toISOString(), articles: genererArticles(params, s.profils, CATALOGUE) },
+          ...s.voyages,
+        ],
+      }));
+      envoyer(() => api<Voyage>('/voyages', { methode: 'POST', corps: { ...params, id } }), remplacerVoyage);
+      return id;
+    },
+
+    modifierVoyage: (id, params) => {
+      set((s) => ({
+        voyages: s.voyages.map((v) => (v.id === id ? regenerer({ ...v, ...params }, s.profils) : v)),
+      }));
+      envoyer(() => api<Voyage>(`/voyages/${enc(id)}`, { methode: 'PUT', corps: params }), remplacerVoyage);
+    },
+
+    supprimerVoyage: (id) => {
+      set((s) => ({ voyages: s.voyages.filter((v) => v.id !== id) }));
+      envoyer(() => api(`/voyages/${enc(id)}`, { methode: 'DELETE' }));
+    },
+
+    // Pointage : l'écran est déjà à jour, la réponse du serveur n'est pas réappliquée.
+    changerStatut: (voyageId, articleId, statut) => {
+      majArticle(voyageId, articleId, { statut });
+      envoyer(() =>
+        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { statut } }),
+      );
+    },
+
+    changerQuantite: (voyageId, articleId, quantite) => {
+      const q = Math.max(1, quantite);
+      majArticle(voyageId, articleId, { quantite: q, ajuste: true });
+      envoyer(() =>
+        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { quantite: q } }),
+      );
+    },
+
+    changerListe: (voyageId, articleId, liste) => {
+      majArticle(voyageId, articleId, { liste, listeChoisie: true });
+      envoyer(() =>
+        api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { liste } }),
+      );
+    },
+
+    // L'identifiant définitif est donné par le serveur : l'article provisoire est remplacé à la réponse.
+    ajouterArticle: (voyageId, nom, categorie, proprietaire, liste = 'valise') => {
+      const provisoire = `ajout-${nouvelId()}`;
+      majArticles(voyageId, (articles) => [
+        ...articles,
+        { id: provisoire, nom, categorie, proprietaire, quantite: 1, statut: 'a-prendre', liste, origine: 'ajout' },
+      ]);
+      envoyer(
+        () =>
+          api<ArticleVoyage>(`/voyages/${enc(voyageId)}/articles`, {
+            methode: 'POST',
+            corps: { nom, categorie, proprietaire, liste },
+          }),
+        (cree) => majArticle(voyageId, provisoire, { id: cree.id }),
+        true,
+      );
+    },
+
+    ajouterSuggestion: (voyageId, article) => {
+      majArticles(voyageId, (articles) =>
+        articles.some((a) => a.id === article.id) ? articles : [...articles, { ...article, origine: 'suggestion' }],
+      );
+      envoyer(() => api(`/voyages/${enc(voyageId)}/suggestions/${enc(article.id)}`, { methode: 'POST' }));
+    },
+
+    supprimerArticle: (voyageId, articleId) => {
+      majArticles(voyageId, (articles) => articles.filter((a) => a.id !== articleId));
+      envoyer(() => api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'DELETE' }));
+    },
+  };
+});

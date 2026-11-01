@@ -49,10 +49,10 @@ Thème clair / sombre selon le réglage de l'appareil.
 
 ## État actuel et étapes
 
-1. ✅ Interface responsive Next.js (données dans le navigateur, `localStorage`, en attendant l'API)
+1. ✅ Interface responsive Next.js
 2. ✅ API Express + Prisma + MariaDB : comptes (lien de connexion par e-mail), familles, voyages, pointage, reprise des données du navigateur
 3. ✅ Conformité au kit Polytools Admin v2 (pnpm, processus unique, variables, en-têtes, journaux)
-4. Branchement de l'interface sur l'API (écran de connexion, données sur le serveur)
+4. ✅ Interface branchée sur l'API : connexion par lien, données sur le serveur, pointage instantané, récupération des données du navigateur
 5. Catalogue en base + **Administration** (éditeur de règles, simulateur, archivage, historique)
 6. Partage de la famille et pointage à plusieurs
 7. Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin

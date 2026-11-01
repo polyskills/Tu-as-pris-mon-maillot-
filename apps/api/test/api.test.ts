@@ -173,7 +173,10 @@ describe('reprise des données du navigateur', () => {
     const agent = await connecter('import@example.com');
     const res = await agent.post('/api/import').send(local).expect(200);
     expect(res.body.profils[0].prenom).toBe('Tom');
-    expect(res.body.voyages[0].articles[0].statut).toBe('dans-valise');
+    const articles = res.body.voyages[0].articles as Article[];
+    expect(articles.find((a) => a.id === 'tom001:couches')?.statut).toBe('dans-valise');
+    // Liste complétée avec le catalogue actuel
+    expect(articles.find((a) => a.id === 'tom001:bodies')).toBeDefined();
     await agent.post('/api/import').send(local).expect(409);
   });
 

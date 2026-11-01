@@ -333,11 +333,18 @@ export async function importer(familleId: string, donnees: unknown) {
         },
       });
     }
+    // La liste est recalculée avec le catalogue actuel : le pointage, les quantités ajustées et les ajouts sont gardés.
+    const profilsImportes = await profilsDe(tx, familleId);
     for (const { id, articles, ...params } of voyages) {
       const participants = params.participants.filter((x) => idsProfils.has(x));
-      await tx.voyage.create({ data: { id, familleId, ...colonnesParametres({ ...params, participants }) } });
-      const valides = articles.filter((a) => a.proprietaire === COMMUN || participants.includes(a.proprietaire));
-      await remplacerArticles(tx, id, valides as ArticleVoyage[]);
+      const parametres = { ...params, participants } as ParametresVoyage;
+      await tx.voyage.create({ data: { id, familleId, ...colonnesParametres(parametres) } });
+      const liste = fusionner(
+        articles as ArticleVoyage[],
+        genererArticles(parametres, profilsImportes, CATALOGUE),
+        participants,
+      );
+      await remplacerArticles(tx, id, liste);
     }
     return etatTx(tx, familleId);
   });
