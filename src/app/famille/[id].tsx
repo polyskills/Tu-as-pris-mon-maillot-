@@ -58,6 +58,8 @@ export default function EditionProfil() {
     ? (Object.fromEntries(HABITUDES_PAR_AGE[tranche].map((h) => [h, HABITUDES[h]])) as Record<Habitude, string>)
     : undefined;
   const habitudesRetenues = tranche ? habitudes.filter((h) => HABITUDES_PAR_AGE[tranche].includes(h)) : habitudes;
+  // Les affaires communes se confient à partir de 12 ans.
+  const peutGererCommun = tranche !== 'bebe' && tranche !== 'enfant';
 
   const valider = () => {
     const profil: Profil = {
@@ -66,7 +68,7 @@ export default function EditionProfil() {
       couleur,
       anneeNaissance: anneeNum,
       habitudes: habitudesRetenues,
-      responsabilites,
+      responsabilites: peutGererCommun ? responsabilites : [],
       articlesPerso,
     };
     enregistrer(profil);
@@ -134,12 +136,14 @@ export default function EditionProfil() {
         )}
       </Champ>
 
-      <Champ
-        libelle="S'occupe des affaires communes"
-        aide="Ex. : c'est elle qui gère les papiers et la trousse de secours."
-      >
-        <ChoixPuces options={RESPONSABILITES} valeur={responsabilites} onChange={setResponsabilites} />
-      </Champ>
+      {peutGererCommun && (
+        <Champ
+          libelle="S'occupe des affaires communes"
+          aide="Ex. : c'est elle qui gère les papiers et la trousse de secours."
+        >
+          <ChoixPuces options={RESPONSABILITES} valeur={responsabilites} onChange={setResponsabilites} />
+        </Champ>
+      )}
 
       <Champ libelle="Toujours dans sa valise" aide="Ce que cette personne emporte à chaque fois, en plus de la base.">
         {articlesPerso.map((a) => (
