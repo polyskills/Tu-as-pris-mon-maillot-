@@ -90,8 +90,10 @@ Thème clair / sombre selon le réglage de l'appareil.
 8. Ouverture publique :
    - ✅ RGPD dans l'outil : page « Mon compte » avec export des données (JSON) et suppression du compte
    - ✅ Invitations limitées (20 en attente par famille, 20 envois par heure et par adresse IP)
-   - À faire : pages légales (mentions légales, confidentialité), vrai service d'envoi d'e-mails, sauvegardes hors du
-     VPS, fail2ban, freemium (paiement)
+   - ✅ Pages légales `/mentions-legales` et `/confidentialite` (lisibles sans compte), éditeur Adaptools, marque de
+     Polyskills. Les informations sont dans `apps/web/src/lib/legal.ts` ; une valeur manquante s'affiche en jaune
+     « à compléter » (capital, contact, hébergeur, prestataire d'e-mails, durée des journaux)
+   - À faire : vrai service d'envoi d'e-mails, sauvegardes hors du VPS, fail2ban, freemium (paiement)
 
 L'ancienne version Expo (React Native) est conservée sur la branche `archive/expo`.
 

@@ -2,6 +2,7 @@
 
 import { Mail } from 'lucide-react';
 import { useState } from 'react';
+import { LiensLegaux } from '@/components/PageLegale';
 import { Bouton, Carte, classeSaisie } from '@/components/ui';
 import { demanderLien } from '@/lib/api';
 
@@ -68,6 +69,7 @@ export default function Connexion() {
           </form>
         </Carte>
       )}
+      <LiensLegaux className="text-center" />
     </main>
   );
 }

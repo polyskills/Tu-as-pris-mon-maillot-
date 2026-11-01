@@ -4,9 +4,12 @@ import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, UserRound, Users, Wifi
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
+import { LiensLegaux } from '@/components/PageLegale';
 import { Bouton } from '@/components/ui';
 import { deconnecter, ONGLET } from '@/lib/api';
 import { useStore } from '@/store/store';
+
+const PAGES_PUBLIQUES = ['/mentions-legales', '/confidentialite'];
 
 const NAVIGATION = [
   { href: '/', libelle: 'Mes voyages', Icone: Luggage, actif: (p: string) => p === '/' || p.startsWith('/voyage') },
@@ -32,6 +35,8 @@ export function Coque({ children }: { children: ReactNode }) {
   const role = useStore((s) => s.role);
   const charger = useStore((s) => s.charger);
   const surConnexion = chemin === '/connexion';
+  /** Pages lisibles sans être connecté (mentions légales, confidentialité). */
+  const publique = PAGES_PUBLIQUES.includes(chemin);
 
   useEffect(() => {
     void charger();
@@ -102,11 +107,12 @@ export function Coque({ children }: { children: ReactNode }) {
   }, [statut, voyagesIds]);
 
   useEffect(() => {
-    if (statut === 'deconnecte' && !surConnexion) router.replace('/connexion');
+    if (statut === 'deconnecte' && !surConnexion && !publique) router.replace('/connexion');
     if (statut === 'pret' && surConnexion) router.replace('/');
-  }, [statut, surConnexion, router]);
+  }, [statut, surConnexion, publique, router]);
 
   if (surConnexion) return statut === 'pret' ? null : <>{children}</>;
+  if (publique && statut !== 'pret') return <>{children}</>;
   if (statut !== 'pret') {
     return <p className="p-10 text-center text-discret">{statut === 'chargement' ? 'Chargement…' : ''}</p>;
   }
@@ -165,6 +171,7 @@ export function Coque({ children }: { children: ReactNode }) {
           >
             <LogOut size={18} /> Se déconnecter
           </button>
+          <LiensLegaux className="px-3 pt-1" />
         </div>
       </aside>
 
@@ -184,6 +191,7 @@ export function Coque({ children }: { children: ReactNode }) {
           >
             <LogOut size={16} /> Se déconnecter
           </button>
+          <LiensLegaux />
         </div>
       </div>
 
