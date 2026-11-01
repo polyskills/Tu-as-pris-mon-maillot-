@@ -59,6 +59,10 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   l'application : copie sur l'appareil (`localStorage`) pour s'ouvrir sans réseau, et file d'attente du pointage
   (case, quantité, liste) envoyée au retour du réseau. Hors ligne, les autres modifications (profils, voyages,
   ajouts) sont refusées avec un message. À la déconnexion, tout ce qui concerne le compte est effacé de l'appareil.
+- **Données personnelles** : `GET /api/moi/export` renvoie tout ce qui concerne le compte et sa famille ;
+  `DELETE /api/moi` supprime le compte (et sa famille s'il en est le seul membre ; refusé s'il gère une famille
+  partagée sans l'avoir confiée) et retire son adresse partout (pointage, invitations, équipe du catalogue). Seul
+  l'historique du catalogue garde l'adresse de son auteur (traçabilité des modifications de l'équipe).
 - **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.
 - **Migration de la base** vers un MySQL géré (OVHcloud, Scaleway…) si le produit se développe : copie des données
   + changement de l'URL de connexion.
@@ -83,8 +87,11 @@ Thème clair / sombre selon le réglage de l'appareil.
 6. ✅ Partage de la famille (invitation par e-mail, rôle de propriétaire transmissible) et pointage à plusieurs en
    direct, avec « Mis par … »
 7. ✅ Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin
-8. Ouverture publique : sécurité (limitation de requêtes, en-têtes, fail2ban), sauvegardes hors du VPS, pages légales
-   et RGPD, freemium (paiement)
+8. Ouverture publique :
+   - ✅ RGPD dans l'outil : page « Mon compte » avec export des données (JSON) et suppression du compte
+   - ✅ Invitations limitées (20 en attente par famille, 20 envois par heure et par adresse IP)
+   - À faire : pages légales (mentions légales, confidentialité), vrai service d'envoi d'e-mails, sauvegardes hors du
+     VPS, fail2ban, freemium (paiement)
 
 L'ancienne version Expo (React Native) est conservée sur la branche `archive/expo`.
 

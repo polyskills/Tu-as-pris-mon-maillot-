@@ -12,6 +12,9 @@ import { envoyerInvitation } from './mail';
 
 const schemaEmail = z.string().trim().toLowerCase().pipe(z.email('Adresse e-mail invalide')).pipe(z.string().max(255));
 
+/** Au-delà, il faut annuler des invitations avant d'en envoyer d'autres (chacune envoie un e-mail). */
+const MAX_INVITATIONS = 20;
+
 const PROPRIETAIRE = 'proprietaire';
 const MEMBRE = 'membre';
 
@@ -48,6 +51,10 @@ export async function inviter(userId: string, familleId: string, auteur: string,
   const email = schemaEmail.parse((donnees as { email?: unknown } | undefined)?.email);
   const dejaMembre = await prisma.membre.count({ where: { familleId, user: { email } } });
   if (dejaMembre) throw new Conflit('Cette personne fait déjà partie de la famille');
+  const enAttente = await prisma.invitation.count({ where: { familleId, email: { not: email } } });
+  if (enAttente >= MAX_INVITATIONS) {
+    throw new Conflit(`${MAX_INVITATIONS} invitations en attente au maximum : annule-en avant d’en envoyer d’autres`);
+  }
   await prisma.invitation.upsert({
     where: { familleId_email: { familleId, email } },
     create: { familleId, email, invitePar: auteur },

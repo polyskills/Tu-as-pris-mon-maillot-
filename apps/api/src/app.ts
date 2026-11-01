@@ -6,6 +6,7 @@ import { pinoHttp } from 'pino-http';
 import { z } from 'zod';
 import { auth } from './auth';
 import * as catalogue from './catalogue';
+import * as compte from './compte';
 import * as donnees from './donnees';
 import * as evenements from './evenements';
 import { Conflit, Interdit, Introuvable, NonConnecte } from './erreurs';
@@ -87,6 +88,19 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     }),
   );
 
+  // Invitations : chacune envoie un e-mail, à une adresse choisie par l'utilisateur. Limite stricte pour que
+  // l'outil ne serve pas à envoyer des e-mails en masse.
+  app.post(
+    '/api/famille/invitations',
+    rateLimit({
+      windowMs: 60 * 60_000,
+      limit: 20,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      skip: () => enTest,
+    }),
+  );
+
   // Better Auth lit lui-même le corps des requêtes : à monter avant express.json().
   app.all('/api/auth/*splat', toNodeHandler(auth));
   app.use(express.json({ limit: '2mb' }));
@@ -111,7 +125,7 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   });
 
   const famille = (res: Response) => res.locals.familleId as string;
-  const compte = (res: Response) => res.locals.userId as string;
+  const utilisateur = (res: Response) => res.locals.userId as string;
   const email = (res: Response) => res.locals.email as string;
 
   // Après chaque modification réussie, prévient les autres appareils de la famille (et des familles touchées en
@@ -142,15 +156,32 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     })),
   );
 
+  // --- Données personnelles (RGPD) ---
+  app.get(
+    '/api/moi/export',
+    route(async (req, res) => {
+      res.attachment(`tu-as-pris-mon-maillot-${new Date().toISOString().slice(0, 10)}.json`);
+      return compte.exporter(utilisateur(res), famille(res));
+    }),
+  );
+  app.delete(
+    '/api/moi',
+    route(async (req, res) => {
+      await compte.supprimer(utilisateur(res), email(res), famille(res));
+      res.clearCookie('better-auth.session_token');
+      res.clearCookie('__Secure-better-auth.session_token');
+    }),
+  );
+
   // --- Partage de la famille ---
   app.get(
     '/api/famille/partage',
-    route(async (req, res) => partage.partage(compte(res), famille(res))),
+    route(async (req, res) => partage.partage(utilisateur(res), famille(res))),
   );
   app.post(
     '/api/famille/invitations',
     route(async (req, res) => {
-      const resultat = await partage.inviter(compte(res), famille(res), email(res), req.body);
+      const resultat = await partage.inviter(utilisateur(res), famille(res), email(res), req.body);
       // La personne invitée, si elle a déjà un compte, voit l'invitation tout de suite.
       res.locals.aussi = await partage.famillesDesInvites(famille(res));
       return resultat;
@@ -158,27 +189,27 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   );
   app.delete(
     '/api/famille/invitations/:email',
-    route(async (req, res) => partage.annulerInvitation(compte(res), famille(res), param(req, 'email'))),
+    route(async (req, res) => partage.annulerInvitation(utilisateur(res), famille(res), param(req, 'email'))),
   );
   app.delete(
     '/api/famille/membres/:email',
-    route(async (req, res) => partage.retirerMembre(compte(res), famille(res), param(req, 'email'))),
+    route(async (req, res) => partage.retirerMembre(utilisateur(res), famille(res), param(req, 'email'))),
   );
   app.post(
     '/api/famille/membres/:email/proprietaire',
-    route(async (req, res) => partage.confier(compte(res), famille(res), param(req, 'email'))),
+    route(async (req, res) => partage.confier(utilisateur(res), famille(res), param(req, 'email'))),
   );
   app.post(
     '/api/famille/quitter',
     route(async (req, res) => {
-      await partage.quitter(compte(res), famille(res));
-      return donnees.etat(await donnees.familleDuCompte(compte(res)));
+      await partage.quitter(utilisateur(res), famille(res));
+      return donnees.etat(await donnees.familleDuCompte(utilisateur(res)));
     }),
   );
   app.post(
     '/api/invitations/:id/accepter',
     route(async (req, res) => {
-      const rejointe = await partage.accepter(compte(res), email(res), famille(res), param(req, 'id'));
+      const rejointe = await partage.accepter(utilisateur(res), email(res), famille(res), param(req, 'id'));
       res.locals.aussi = [rejointe];
       return donnees.etat(rejointe);
     }),

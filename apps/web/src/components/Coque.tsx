@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, Users, WifiOff, X } from 'lucide-react';
+import { ChevronLeft, LogOut, Luggage, SlidersHorizontal, UserRound, Users, WifiOff, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
@@ -148,9 +148,16 @@ export function Coque({ children }: { children: ReactNode }) {
           </Link>
         ))}
         <div className="mt-auto flex flex-col gap-1 border-t border-bordure pt-3">
-          <span className="truncate px-3 text-sm text-discret" title={email}>
-            {email}
-          </span>
+          <Link
+            href="/compte"
+            title={email}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium hover:bg-bordure/50 ${
+              chemin === '/compte' ? 'bg-accent-clair text-accent' : 'text-discret'
+            }`}
+          >
+            <UserRound size={18} className="shrink-0" />
+            <span className="truncate">{email}</span>
+          </Link>
           <button
             type="button"
             onClick={() => void seDeconnecter()}
@@ -166,13 +173,16 @@ export function Coque({ children }: { children: ReactNode }) {
         <InvitationsRecues />
         <RepriseNavigateur />
         {children}
-        <div className="mx-auto w-full max-w-6xl px-4 pb-6 md:hidden">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-3 px-4 pb-6 md:hidden">
+          <Link href="/compte" className="flex items-center gap-2 text-sm text-discret">
+            <UserRound size={16} /> Mon compte ({email})
+          </Link>
           <button
             type="button"
             onClick={() => void seDeconnecter()}
             className="flex items-center gap-2 text-sm text-discret"
           >
-            <LogOut size={16} /> Se déconnecter ({email})
+            <LogOut size={16} /> Se déconnecter
           </button>
         </div>
       </div>
