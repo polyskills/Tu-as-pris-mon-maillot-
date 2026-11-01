@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { Bouton } from '@/components/ui';
-import { deconnecter } from '@/lib/api';
+import { deconnecter, ONGLET } from '@/lib/api';
 import { useStore } from '@/store/store';
 
 const NAVIGATION = [
@@ -37,8 +37,27 @@ export function Coque({ children }: { children: ReactNode }) {
     void charger();
   }, [charger]);
 
-  // Famille partagée : relit régulièrement les données (pointage des autres membres), seulement quand
-  // l'onglet est visible, et aussitôt qu'on y revient.
+  // Famille partagée : le serveur prévient en direct quand un autre appareil modifie quelque chose ; l'onglet
+  // relit alors les données (regroupées si plusieurs changements arrivent d'un coup).
+  const familleId = useStore((s) => s.familleId);
+  useEffect(() => {
+    if (statut !== 'pret' || !familleId || typeof EventSource === 'undefined') return;
+    let attente: ReturnType<typeof setTimeout> | undefined;
+    const source = new EventSource('/api/evenements');
+    source.addEventListener('changement', (e) => {
+      const { origine } = JSON.parse((e as MessageEvent<string>).data) as { origine?: string };
+      if (origine === ONGLET) return;
+      clearTimeout(attente);
+      attente = setTimeout(() => void useStore.getState().rafraichir(), DELAI_REGROUPEMENT);
+    });
+    return () => {
+      clearTimeout(attente);
+      source.close();
+    };
+  }, [statut, familleId]);
+
+  // En secours (connexion en direct coupée) : relecture régulière quand l'onglet est visible, et aussitôt
+  // qu'on y revient.
   useEffect(() => {
     if (statut !== 'pret') return;
     const relire = () => {
@@ -163,8 +182,10 @@ function MessageErreur() {
   );
 }
 
-/** Toutes les 10 secondes : assez pour voir le pointage des autres sans surcharger le serveur. */
-const INTERVALLE_RELECTURE = 10_000;
+/** Relecture de secours, si la connexion en direct est coupée. */
+const INTERVALLE_RELECTURE = 30_000;
+/** Plusieurs changements reçus coup sur coup ne déclenchent qu'une relecture. */
+const DELAI_REGROUPEMENT = 300;
 
 /** Invitations à rejoindre la famille d'un autre compte : accepter ou refuser. */
 function InvitationsRecues() {

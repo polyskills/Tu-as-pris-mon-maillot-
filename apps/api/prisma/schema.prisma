@@ -180,6 +180,8 @@ model ArticleVoyage {
   achetable    Boolean @default(false)
   /// Position dans la liste (ordre du catalogue, puis ajouts)
   rang         Int     @default(0)
+  /// E-mail du compte qui a changé le statut en dernier
+  pointePar    String? @db.VarChar(255)
   voyage       Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
 
   @@id([voyageId, id])

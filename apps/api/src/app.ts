@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { auth } from './auth';
 import * as catalogue from './catalogue';
 import * as donnees from './donnees';
+import * as evenements from './evenements';
 import { Conflit, Interdit, Introuvable, NonConnecte } from './erreurs';
 import { env } from './env';
 import { journal } from './journal';
@@ -113,6 +114,24 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   const compte = (res: Response) => res.locals.userId as string;
   const email = (res: Response) => res.locals.email as string;
 
+  // Après chaque modification réussie, prévient les autres appareils de la famille (et des familles touchées en
+  // plus : `res.locals.aussi`). L'en-tête X-Onglet identifie l'onglet auteur, qui n'a pas besoin de relire.
+  app.use('/api', (req, res, next) => {
+    if (req.method !== 'GET') {
+      res.on('finish', () => {
+        if (res.statusCode >= 400) return;
+        if (res.locals.tous) return evenements.signalerATous();
+        const origine = req.get('X-Onglet')?.slice(0, 40);
+        for (const id of new Set([famille(res), ...((res.locals.aussi as string[] | undefined) ?? [])])) {
+          evenements.signaler(id, origine);
+        }
+      });
+    }
+    next();
+  });
+
+  app.get('/api/evenements', (req, res) => evenements.flux(famille(res), req, res));
+
   app.get(
     '/api/moi',
     route(async (req, res) => ({
@@ -130,7 +149,12 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   );
   app.post(
     '/api/famille/invitations',
-    route(async (req, res) => partage.inviter(compte(res), famille(res), email(res), req.body)),
+    route(async (req, res) => {
+      const resultat = await partage.inviter(compte(res), famille(res), email(res), req.body);
+      // La personne invitée, si elle a déjà un compte, voit l'invitation tout de suite.
+      res.locals.aussi = await partage.famillesDesInvites(famille(res));
+      return resultat;
+    }),
   );
   app.delete(
     '/api/famille/invitations/:email',
@@ -139,6 +163,10 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   app.delete(
     '/api/famille/membres/:email',
     route(async (req, res) => partage.retirerMembre(compte(res), famille(res), param(req, 'email'))),
+  );
+  app.post(
+    '/api/famille/membres/:email/proprietaire',
+    route(async (req, res) => partage.confier(compte(res), famille(res), param(req, 'email'))),
   );
   app.post(
     '/api/famille/quitter',
@@ -151,12 +179,15 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     '/api/invitations/:id/accepter',
     route(async (req, res) => {
       const rejointe = await partage.accepter(compte(res), email(res), famille(res), param(req, 'id'));
+      res.locals.aussi = [rejointe];
       return donnees.etat(rejointe);
     }),
   );
   app.post(
     '/api/invitations/:id/refuser',
-    route(async (req, res) => partage.refuser(email(res), param(req, 'id'))),
+    route(async (req, res) => {
+      res.locals.aussi = [await partage.refuser(email(res), param(req, 'id'))];
+    }),
   );
   // Catalogue en service : l'interface génère les listes avec, comme le serveur.
   app.get(
@@ -196,7 +227,9 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
 
   app.patch(
     '/api/voyages/:id/articles/:article',
-    route(async (req, res) => donnees.majArticle(famille(res), param(req, 'id'), param(req, 'article'), req.body)),
+    route(async (req, res) =>
+      donnees.majArticle(famille(res), param(req, 'id'), param(req, 'article'), req.body, email(res)),
+    ),
   );
   app.post(
     '/api/voyages/:id/articles',
@@ -225,6 +258,11 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   };
 
   app.use('/api/admin', exiger('admin', 'editeur'));
+  // Le catalogue sert à toutes les familles : leurs voyages à venir viennent d'être régénérés.
+  app.use('/api/admin/catalogue', (_req, res, next) => {
+    res.locals.tous = true;
+    next();
+  });
   app.get(
     '/api/admin/catalogue',
     route(async () => catalogue.listerAdmin()),

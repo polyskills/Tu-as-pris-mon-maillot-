@@ -36,6 +36,8 @@ interface Etat extends EtatServeur {
   /** Rôle dans l'équipe du catalogue (absent pour un compte ordinaire). */
   role?: Role;
   invitations: InvitationRecue[];
+  /** Augmente à chaque relecture des données du serveur (les écrans annexes, comme le partage, se rechargent). */
+  revision: number;
   /** Catalogue en service, fourni par le serveur : les listes sont générées avec. */
   catalogue: ArticleCatalogue[];
   erreur?: string;
@@ -150,7 +152,13 @@ export const useStore = create<Etat>()((set, get) => {
     try {
       const [moi, etat] = await Promise.all([api<Moi>('/moi'), api<EtatServeur>('/etat')]);
       if (enAttente > 0 || generation !== depart) return;
-      set({ ...etat, familleId: moi.familleId, role: moi.role, invitations: moi.invitations });
+      set((s) => ({
+        ...etat,
+        familleId: moi.familleId,
+        role: moi.role,
+        invitations: moi.invitations,
+        revision: s.revision + 1,
+      }));
     } catch (e) {
       if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte' });
     }
@@ -169,6 +177,7 @@ export const useStore = create<Etat>()((set, get) => {
     profils: [],
     voyages: [],
     invitations: [],
+    revision: 0,
     statut: 'chargement',
     catalogue: [],
 
@@ -244,7 +253,7 @@ export const useStore = create<Etat>()((set, get) => {
 
     // Pointage : l'écran est déjà à jour, la réponse du serveur n'est pas réappliquée.
     changerStatut: (voyageId, articleId, statut) => {
-      majArticle(voyageId, articleId, { statut });
+      majArticle(voyageId, articleId, { statut, pointePar: get().email });
       envoyer(() =>
         api(`/voyages/${enc(voyageId)}/articles/${enc(articleId)}`, { methode: 'PATCH', corps: { statut } }),
       );

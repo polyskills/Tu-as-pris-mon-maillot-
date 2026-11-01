@@ -207,6 +207,7 @@ export function fusionner(
       ajuste: ancien.ajuste,
       liste: ancien.listeChoisie ? ancien.liste : n.liste,
       listeChoisie: ancien.listeChoisie,
+      ...(ancien.pointePar && { pointePar: ancien.pointePar }),
     };
   });
   const ajouts = anciens.filter(

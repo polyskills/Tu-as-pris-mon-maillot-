@@ -4,7 +4,7 @@ import { dernieresInvitations } from '../src/mail';
 import { connecter, profil, viderBase, voyagePlage } from './outils';
 
 type Agent = Awaited<ReturnType<typeof connecter>>;
-type Article = { id: string; statut: string };
+type Article = { id: string; statut: string; pointePar?: string };
 
 beforeAll(viderBase);
 afterAll(() => prisma.$disconnect());
@@ -79,6 +79,7 @@ describe('partage de la famille', () => {
     const etat = await anne.get('/api/etat').expect(200);
     const maillot = (etat.body.voyages[0].articles as Article[]).find((a) => a.id === 'anne01:maillot');
     expect(maillot?.statut).toBe('dans-valise');
+    expect(maillot?.pointePar).toBe('paul@example.com');
   });
 
   it('réserve les invitations et les retraits à la propriétaire', async () => {
@@ -133,5 +134,22 @@ describe('partage de la famille', () => {
     await autre.post('/api/famille/invitations').send({ email: 'anne@example.com' }).expect(200);
     const [pourAnne] = await invitationsDe(anne);
     await anne.post(`/api/invitations/${pourAnne.id}/accepter`).expect(409);
+  });
+
+  it('confie la famille à un autre membre, qui peut alors la gérer', async () => {
+    await paul.post('/api/famille/membres/anne@example.com/proprietaire').expect(403);
+    await anne.post('/api/famille/membres/inconnu@example.com/proprietaire').expect(404);
+    const res = await anne.post('/api/famille/membres/paul@example.com/proprietaire').expect(200);
+    expect(res.body.monRole).toBe('membre');
+    expect(res.body.membres).toEqual([
+      { email: 'anne@example.com', role: 'membre', moi: true },
+      { email: 'paul@example.com', role: 'proprietaire', moi: false },
+    ]);
+    await anne.post('/api/famille/invitations').send({ email: 'ami@example.com' }).expect(403);
+    await paul.post('/api/famille/invitations').send({ email: 'ami@example.com' }).expect(200);
+    // Anne n'est plus propriétaire : elle peut quitter la famille, qui reste à Paul avec ses données.
+    await anne.post('/api/famille/quitter').expect(200);
+    const etat = await paul.get('/api/etat').expect(200);
+    expect(etat.body.voyages.map((v: { id: string }) => v.id)).toEqual(['voyag1']);
   });
 });

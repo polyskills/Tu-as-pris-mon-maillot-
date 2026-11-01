@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Send, Trash2 } from 'lucide-react';
+import { Crown, LogOut, Send, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Bouton, Carte, classeSaisie } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -18,6 +18,8 @@ const enc = encodeURIComponent;
 export function PartageFamille() {
   const quitterFamille = useStore((s) => s.quitterFamille);
   const familleId = useStore((s) => s.familleId);
+  // Rechargée à chaque relecture : un membre ajouté ou une invitation refusée apparaît sans recharger la page.
+  const revision = useStore((s) => s.revision);
   const [partage, setPartage] = useState<Partage>();
   const [email, setEmail] = useState('');
   const [erreur, setErreur] = useState<string>();
@@ -28,7 +30,7 @@ export function PartageFamille() {
     api<Partage>('/famille/partage')
       .then(setPartage)
       .catch((e: Error) => setErreur(e.message));
-  }, [familleId]);
+  }, [familleId, revision]);
 
   const agir = async (action: () => Promise<Partage | void>, succes?: string) => {
     setOccupe(true);
@@ -83,7 +85,27 @@ export function PartageFamille() {
               {m.email}
               {m.moi && <span className="text-discret"> (toi)</span>}
             </span>
-            <span className="text-sm text-discret">{m.role === 'proprietaire' ? 'A créé la famille' : 'Membre'}</span>
+            <span className="text-sm text-discret">{m.role === 'proprietaire' ? 'Gère la famille' : 'Membre'}</span>
+            {proprietaire && !m.moi && (
+              <button
+                type="button"
+                aria-label={`Confier la famille à ${m.email}`}
+                title="Confier la famille"
+                disabled={occupe}
+                onClick={() =>
+                  confirm(
+                    `Confier la famille à ${m.email} ? Cette personne pourra inviter et retirer des membres ; tu deviendras simple membre.`,
+                  ) &&
+                  void agir(
+                    () => api<Partage>(`/famille/membres/${enc(m.email)}/proprietaire`, { methode: 'POST' }),
+                    `${m.email} gère maintenant la famille.`,
+                  )
+                }
+                className="rounded-full p-1.5 text-accent hover:bg-accent-clair"
+              >
+                <Crown size={18} />
+              </button>
+            )}
             {proprietaire && !m.moi && (
               <button
                 type="button"

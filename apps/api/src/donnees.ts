@@ -54,6 +54,7 @@ const versArticle = (l: LigneArticle): ArticleVoyage => ({
   ...(l.ajuste && { ajuste: true }),
   ...(l.listeChoisie && { listeChoisie: true }),
   ...(l.achetable && { achetable: true }),
+  ...(l.pointePar && { pointePar: l.pointePar }),
 });
 
 const versVoyage = (l: LigneVoyage): Voyage => ({
@@ -101,6 +102,7 @@ const colonnesArticle = (voyageId: string, a: ArticleVoyage, rang: number) => ({
   ajuste: a.ajuste ?? false,
   listeChoisie: a.listeChoisie ?? false,
   achetable: a.achetable ?? false,
+  pointePar: a.pointePar ?? null,
 });
 
 async function remplacerArticles(tx: Tx, voyageId: string, articles: ArticleVoyage[]) {
@@ -263,15 +265,21 @@ async function verifierVoyage(familleId: string, voyageId: string) {
   if (!(await prisma.voyage.count({ where: { id: voyageId, familleId } }))) throw new Introuvable('Voyage introuvable');
 }
 
-/** Pointage, quantité ou passage valise ↔ courses. */
-export async function majArticle(familleId: string, voyageId: string, articleId: string, donnees: unknown) {
+/** Pointage, quantité ou passage valise ↔ courses. `auteur` : e-mail du compte, retenu pour le pointage. */
+export async function majArticle(
+  familleId: string,
+  voyageId: string,
+  articleId: string,
+  donnees: unknown,
+  auteur?: string,
+) {
   const patch = schemaMajArticle.parse(donnees);
   await verifierVoyage(familleId, voyageId);
   try {
     const ligne = await prisma.articleVoyage.update({
       where: { voyageId_id: { voyageId, id: articleId } },
       data: {
-        ...(patch.statut && { statut: patch.statut }),
+        ...(patch.statut && { statut: patch.statut, pointePar: auteur ?? null }),
         ...(patch.quantite && { quantite: patch.quantite, ajuste: true }),
         ...(patch.liste && { liste: patch.liste, listeChoisie: true }),
       },

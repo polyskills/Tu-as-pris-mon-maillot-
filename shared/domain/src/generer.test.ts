@@ -252,6 +252,7 @@ describe('fusionner', () => {
     const avant = genererArticles(plage, famille, CATALOGUE);
     const maillot = trouve(avant, 'lea:maillot')!;
     maillot.statut = 'dans-valise';
+    maillot.pointePar = 'maman@example.com';
     const slips = trouve(avant, 'papa:sous-vetements')!;
     slips.quantite = 4;
     slips.ajuste = true;
@@ -277,6 +278,8 @@ describe('fusionner', () => {
     const apres = fusionner(avant, genererArticles(plusLong, famille, CATALOGUE), plusLong.participants);
 
     expect(trouve(apres, 'lea:maillot')?.statut).toBe('dans-valise');
+    expect(trouve(apres, 'lea:maillot')?.pointePar).toBe('maman@example.com');
+    expect(trouve(apres, 'papa:sous-vetements')).not.toHaveProperty('pointePar');
     expect(trouve(apres, 'papa:sous-vetements')?.quantite).toBe(4);
     expect(trouve(apres, 'maman:sous-vetements')?.quantite).toBe(15);
     expect(trouve(apres, 'bebe:couches')?.liste).toBe('courses');

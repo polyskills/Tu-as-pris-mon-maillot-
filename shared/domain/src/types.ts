@@ -156,6 +156,8 @@ export interface ArticleVoyage {
   listeChoisie?: boolean;
   /** Peut passer dans la liste de courses. */
   achetable?: boolean;
+  /** Adresse e-mail du compte qui a changé le statut en dernier (famille partagée). */
+  pointePar?: string;
 }
 
 export interface Voyage extends ParametresVoyage {

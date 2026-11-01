@@ -4,7 +4,8 @@ import { Conflit, Interdit, Introuvable } from './erreurs';
 import { envoyerInvitation } from './mail';
 
 // Partage d'une famille entre plusieurs comptes.
-// - Un compte appartient à une seule famille. Le compte qui l'a créée en est propriétaire : il invite et retire.
+// - Un compte appartient à une seule famille. Le compte qui l'a créée en est propriétaire : il invite et retire,
+//   et peut confier ce rôle à un autre membre.
 // - Les membres voient et modifient tout (profils, voyages, pointage) ; ils peuvent quitter la famille.
 // - Une invitation vise une adresse e-mail. La personne se connecte avec cette adresse (lien magique : adresse
 //   vérifiée) et accepte ; ses profils et voyages rejoignent alors la famille partagée (rien n'est perdu).
@@ -73,10 +74,26 @@ export async function retirerMembre(userId: string, familleId: string, email: st
   return partage(userId, familleId);
 }
 
+/** Confie la famille à un autre membre : il devient propriétaire, le compte actuel devient simple membre. */
+export async function confier(userId: string, familleId: string, email: string) {
+  await exigerProprietaire(userId, familleId);
+  const cible = await prisma.membre.findFirst({ where: { familleId, user: { email: email.toLowerCase() } } });
+  if (!cible) throw new Introuvable('Membre introuvable');
+  if (cible.userId === userId) throw new Conflit('Tu es déjà propriétaire de la famille');
+  await prisma.$transaction([
+    prisma.membre.update({
+      where: { userId_familleId: { userId: cible.userId, familleId } },
+      data: { role: PROPRIETAIRE },
+    }),
+    prisma.membre.update({ where: { userId_familleId: { userId, familleId } }, data: { role: MEMBRE } }),
+  ]);
+  return partage(userId, familleId);
+}
+
 /** Quitte une famille partagée (réservé aux membres invités : la famille reste à son propriétaire). */
 export async function quitter(userId: string, familleId: string) {
   if ((await roleDans(userId, familleId)) === PROPRIETAIRE) {
-    throw new Conflit('Tu as créé cette famille : retire plutôt les autres membres');
+    throw new Conflit('Tu es propriétaire de cette famille : confie-la d’abord à un autre membre');
   }
   await prisma.membre.deleteMany({ where: { userId, familleId } });
 }
@@ -113,7 +130,7 @@ export async function accepter(userId: string, email: string, familleActuelle: s
     const seul = membres.length === 1;
     const moi = membres.find((m) => m.userId === userId);
     if (!seul && moi?.role === PROPRIETAIRE) {
-      throw new Conflit('Tu partages déjà ta famille : retire d’abord ses autres membres');
+      throw new Conflit('Tu partages déjà ta famille : confie-la à un autre membre avant d’en rejoindre une autre');
     }
     if (seul) {
       await tx.profil.updateMany({ where: { familleId: familleActuelle }, data: { familleId: cible } });
@@ -128,7 +145,19 @@ export async function accepter(userId: string, email: string, familleActuelle: s
   return cible;
 }
 
+/** Refuse une invitation ; renvoie la famille qui avait invité (pour la prévenir). */
 export async function refuser(email: string, invitationId: string) {
   const invitation = await invitationPour(email, invitationId);
   await prisma.invitation.delete({ where: { id: invitation.id } });
+  return invitation.familleId;
+}
+
+/** Familles des comptes invités par cette famille (ceux qui ont déjà un compte). */
+export async function famillesDesInvites(familleId: string) {
+  const emails = (await prisma.invitation.findMany({ where: { familleId }, select: { email: true } })).map(
+    (i) => i.email,
+  );
+  if (!emails.length) return [];
+  const membres = await prisma.membre.findMany({ where: { user: { email: { in: emails } } } });
+  return membres.map((m) => m.familleId);
 }

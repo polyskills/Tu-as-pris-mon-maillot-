@@ -73,12 +73,16 @@ interface Section {
   articles: ArticleVoyage[];
 }
 
+/** Nom court d'un compte (partie de l'adresse avant @) : qui a coché un article dans une famille partagée. */
+const pseudo = (email: string) => email.split('@')[0];
+
 export default function Valise() {
   const { id } = useParams<{ id: string }>();
   const voyage = useStore((s) => s.voyages.find((v) => v.id === id));
   const profils = useStore((s) => s.profils);
   const catalogue = useStore((s) => s.catalogue);
   const changerStatut = useStore((s) => s.changerStatut);
+  const moi = useStore((s) => s.email);
   const changerQuantite = useStore((s) => s.changerQuantite);
   const changerListe = useStore((s) => s.changerListe);
   const ajouterSuggestion = useStore((s) => s.ajouterSuggestion);
@@ -362,6 +366,11 @@ export default function Valise() {
                             </span>
                             {ongletActif === COURSES && (
                               <span className="block text-sm text-discret">{nomDe(a.proprietaire)}</span>
+                            )}
+                            {a.statut !== 'a-prendre' && a.pointePar && a.pointePar !== moi && (
+                              <span className="block text-xs text-discret">
+                                {a.statut === 'dans-valise' ? 'Mis' : 'Écarté'} par {pseudo(a.pointePar)}
+                              </span>
                             )}
                           </span>
                           {a.quantite > 1 && (
