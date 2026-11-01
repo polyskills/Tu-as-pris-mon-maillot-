@@ -5,17 +5,10 @@ export type Climat = 'chaud' | 'tempere' | 'froid';
 export type Zone = 'france' | 'europe' | 'hors-europe';
 export type Transport = 'voiture' | 'avion' | 'train' | 'bateau';
 export type Hebergement = 'hotel' | 'location' | 'mobil-home' | 'tente' | 'famille';
-export type Activite =
-  | 'baignade'
-  | 'randonnee'
-  | 'velo'
-  | 'sport'
-  | 'soiree'
-  | 'plongee'
-  | 'peche'
-  | 'travail';
+export type Activite = 'baignade' | 'randonnee' | 'velo' | 'sport' | 'soiree' | 'plongee' | 'peche' | 'travail';
 
 export type TrancheAge = 'bebe' | 'enfant' | 'ado' | 'adulte' | 'senior';
+export type Sexe = 'F' | 'M';
 
 export type Habitude =
   | 'lunettes'
@@ -64,6 +57,8 @@ export interface Condition {
   hebergements?: Hebergement[];
   activites?: Activite[];
   ages?: TrancheAge[];
+  /** Non satisfait pour une personne dont le sexe n'est pas précisé. */
+  sexes?: Sexe[];
   habitudes?: Habitude[];
   machineALaver?: boolean;
   nuitsMin?: number;
@@ -113,6 +108,8 @@ export interface Profil {
   /** Couleur de l'avatar. Absente sur les profils créés avant son ajout. */
   couleur?: string;
   anneeNaissance: number;
+  /** Facultatif : sert à proposer certains vêtements et habitudes. */
+  sexe?: Sexe;
   habitudes: Habitude[];
   /** Catégories d'affaires communes dont cette personne s'occupe (ex. papiers, santé). */
   responsabilites: Categorie[];

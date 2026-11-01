@@ -7,6 +7,7 @@ import {
   genererSuggestions,
   HABITUDES_PAR_AGE,
   habitudesParDefaut,
+  habitudesProposees,
   progression,
   responsable,
   trancheAge,
@@ -333,5 +334,33 @@ describe('HABITUDES_PAR_AGE', () => {
     ] as const) {
       for (const h of habitudesParDefaut(annee, 2026)) expect(HABITUDES_PAR_AGE[tranche]).toContain(h);
     }
+  });
+});
+
+describe('sexe', () => {
+  const julie = profil('julie', 1987, { sexe: 'F' });
+  const paul = profil('paul', 1985, { sexe: 'M' });
+  const camille = profil('camille', 1990);
+  const trio = [julie, paul, camille];
+  const liste = genererArticles({ ...plage, participants: trio.map((p) => p.id) }, trio, CATALOGUE);
+
+  it('propose robes / jupes aux filles et femmes seulement', () => {
+    expect(noms(de(liste, 'julie'))).toContain('Robes / jupes');
+    expect(noms(de(liste, 'julie'))).not.toContain('Shorts / bermudas');
+    expect(noms(de(liste, 'paul'))).not.toContain('Robes / jupes');
+    expect(noms(de(liste, 'paul'))).toContain('Shorts / bermudas');
+  });
+
+  it('sans sexe précisé, garde le comportement neutre', () => {
+    expect(noms(de(liste, 'camille'))).toContain('Shorts / bermudas');
+    expect(noms(de(liste, 'camille'))).not.toContain('Robes / jupes');
+  });
+
+  it('ne propose pas maquillage et protections à un garçon ou un homme', () => {
+    expect(habitudesProposees('adulte', 'M')).not.toContain('maquillage');
+    expect(habitudesProposees('adulte', 'M')).not.toContain('protections');
+    expect(habitudesProposees('adulte', 'M')).toContain('rasage');
+    expect(habitudesProposees('adulte', 'F')).toContain('maquillage');
+    expect(habitudesProposees('adulte')).toContain('maquillage');
   });
 });

@@ -1,4 +1,15 @@
-import { Activite, Categorie, Climat, Destination, Habitude, Hebergement, TrancheAge, Transport, Zone } from './types';
+import {
+  Activite,
+  Categorie,
+  Climat,
+  Destination,
+  Habitude,
+  Hebergement,
+  Sexe,
+  TrancheAge,
+  Transport,
+  Zone,
+} from './types';
 
 // Libellés affichés à l'écran, dans l'ordre où on les propose.
 
@@ -83,6 +94,13 @@ export const CATEGORIES: Record<Categorie, string> = {
   plage: '🏖️ Plage',
   montagne: '⛰️ Montagne',
   loisirs: '🎲 Loisirs',
+};
+
+/** « nc » : non précisé. */
+export const SEXES: Record<Sexe | 'nc', string> = {
+  F: 'Fille / femme',
+  M: 'Garçon / homme',
+  nc: 'Non précisé',
 };
 
 export const TRANCHES: Record<TrancheAge, string> = {

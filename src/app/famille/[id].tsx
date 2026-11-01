@@ -3,10 +3,10 @@ import { confirmer } from '../../components/confirmer';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
-import { Avatar, Bouton, Champ, ChoixPuces, couleurProfil, Saisie, useStyles } from '../../components/ui';
-import { HABITUDES_PAR_AGE, habitudesParDefaut, trancheAge } from '../../domain/generer';
-import { CATEGORIES, HABITUDES } from '../../domain/libelles';
-import { ArticlePerso, Categorie, Habitude, Profil } from '../../domain/types';
+import { Avatar, Bouton, Champ, ChoixPuces, ChoixUnique, couleurProfil, Saisie, useStyles } from '../../components/ui';
+import { habitudesParDefaut, habitudesProposees, trancheAge } from '../../domain/generer';
+import { CATEGORIES, HABITUDES, SEXES } from '../../domain/libelles';
+import { ArticlePerso, Categorie, Habitude, Profil, Sexe } from '../../domain/types';
 import { nouvelId, useStore } from '../../store/store';
 
 // Catégories qu'on peut confier à quelqu'un pour les affaires communes.
@@ -35,6 +35,7 @@ export default function EditionProfil() {
     existant ? couleurProfil(existant, profils) : COULEURS_PROFIL[profils.length % COULEURS_PROFIL.length],
   );
   const [annee, setAnnee] = useState(existant ? String(existant.anneeNaissance) : '');
+  const [sexe, setSexe] = useState<Sexe | 'nc'>(existant?.sexe ?? 'nc');
   const [habitudes, setHabitudes] = useState<Habitude[]>(existant?.habitudes ?? []);
   // Tant qu'on n'a pas touché aux habitudes d'un nouveau profil, l'âge les pré-coche.
   const [habitudesTouchees, setHabitudesTouchees] = useState(!!existant);
@@ -53,11 +54,12 @@ export default function EditionProfil() {
   const anneeValide = /^\d{4}$/.test(annee) && anneeNum > 1900 && anneeNum <= new Date().getFullYear();
   const valide = prenom.trim().length > 0 && anneeValide;
   const tranche = anneeValide ? trancheAge(anneeNum, new Date().toISOString().slice(0, 10)) : undefined;
-  // Seules les habitudes de la tranche d'âge sont proposées et enregistrées.
-  const proposees = tranche
-    ? (Object.fromEntries(HABITUDES_PAR_AGE[tranche].map((h) => [h, HABITUDES[h]])) as Record<Habitude, string>)
+  // Seules les habitudes adaptées à l'âge (et au sexe s'il est précisé) sont proposées et enregistrées.
+  const listeProposee = tranche ? habitudesProposees(tranche, sexe === 'nc' ? undefined : sexe) : undefined;
+  const proposees = listeProposee
+    ? (Object.fromEntries(listeProposee.map((h) => [h, HABITUDES[h]])) as Record<Habitude, string>)
     : undefined;
-  const habitudesRetenues = tranche ? habitudes.filter((h) => HABITUDES_PAR_AGE[tranche].includes(h)) : habitudes;
+  const habitudesRetenues = listeProposee ? habitudes.filter((h) => listeProposee.includes(h)) : habitudes;
   // Les affaires communes se confient à partir de 12 ans.
   const peutGererCommun = tranche !== 'bebe' && tranche !== 'enfant';
 
@@ -67,6 +69,7 @@ export default function EditionProfil() {
       prenom: prenom.trim(),
       couleur,
       anneeNaissance: anneeNum,
+      ...(sexe !== 'nc' && { sexe }),
       habitudes: habitudesRetenues,
       responsabilites: peutGererCommun ? responsabilites : [],
       articlesPerso,
@@ -119,6 +122,10 @@ export default function EditionProfil() {
 
       <Champ libelle="Année de naissance" aide="Sert à calculer la tranche d'âge (bébé, enfant, ado…) à chaque voyage.">
         <Saisie value={annee} onChangeText={changerAnnee} placeholder="2018" keyboardType="number-pad" maxLength={4} />
+      </Champ>
+
+      <Champ libelle="Sexe" aide="Facultatif : sert à proposer certains vêtements et habitudes.">
+        <ChoixUnique options={SEXES} valeur={sexe} onChange={setSexe} />
       </Champ>
 
       <Champ libelle="Habitudes et besoins">

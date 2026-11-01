@@ -203,3 +203,14 @@ Changement de fond : le moteur gagne une règle **« sauf si »** (ex. : gants s
 | Ballon | Suggestion, fusionnée avec « Raquettes / ballon de plage » |
 | Carte de pêche (eau douce) | Nouvelle suggestion dans les Papiers |
 | Jouets, casque de vélo, tenue de sport, matériel de pêche, jeux de société | Inchangés |
+
+## Sexe (ajout, validé)
+
+Champ facultatif sur le profil : Fille / femme, Garçon / homme, Non précisé (par défaut, et pour les profils existants).
+
+| Élément | Règle |
+|---|---|
+| Robes / jupes | Filles et femmes, dès 3 ans, chaud ou tempéré |
+| Shorts | Filles et femmes : « Shorts » (0,3 par jour, 4 max). Autres : « Shorts / bermudas » (0,5 par jour, 6 max) |
+| Habitudes « Maquillage », « Protections périodiques » | Pas proposées à un garçon ou un homme (il ajoute l'article dans ses articles perso s'il en a besoin) |
+| Habitude « Rasage » | Proposée à tous |

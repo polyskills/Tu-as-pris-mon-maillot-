@@ -9,6 +9,7 @@ import {
   ParametresVoyage,
   Profil,
   RegleQuantite,
+  Sexe,
   TrancheAge,
 } from './types';
 
@@ -24,6 +25,7 @@ export function trancheAge(anneeNaissance: number, dateDepart: string): TrancheA
 /** Ce qu'on sait des personnes concernées par une condition. */
 interface Personnes {
   ages: TrancheAge[];
+  sexes: Sexe[];
   habitudes: Habitude[];
 }
 
@@ -39,6 +41,7 @@ function satisfait(c: Condition, v: ParametresVoyage, p: Personnes): boolean {
     intersecte(c.hebergements, [v.hebergement]) &&
     intersecte(c.activites, v.activites) &&
     intersecte(c.ages, p.ages) &&
+    intersecte(c.sexes, p.sexes) &&
     intersecte(c.habitudes, p.habitudes) &&
     (c.machineALaver === undefined || c.machineALaver === v.machineALaver) &&
     (c.nuitsMin === undefined || v.nuits >= c.nuitsMin) &&
@@ -101,6 +104,7 @@ function appliquer(
 
   const groupe: Personnes = {
     ages: participants.map((p) => trancheAge(p.anneeNaissance, v.depart)),
+    sexes: participants.flatMap((p) => (p.sexe ? [p.sexe] : [])),
     habitudes: participants.flatMap((p) => p.habitudes),
   };
 
@@ -123,7 +127,11 @@ function appliquer(
     }
 
     for (const p of participants) {
-      const personne: Personnes = { ages: [trancheAge(p.anneeNaissance, v.depart)], habitudes: p.habitudes };
+      const personne: Personnes = {
+        ages: [trancheAge(p.anneeNaissance, v.depart)],
+        sexes: p.sexe ? [p.sexe] : [],
+        habitudes: p.habitudes,
+      };
       if (estRequis(article, v, personne)) {
         resultat.push({ ...base, id: `${p.id}:${article.id}`, proprietaire: p.id });
       }
@@ -248,3 +256,11 @@ export const HABITUDES_PAR_AGE: Record<TrancheAge, Habitude[]> = {
   adulte: [...SANTE, ...GRAND, ...LOISIRS],
   senior: [...SANTE, ...GRAND, ...LOISIRS],
 };
+
+/** Habitudes qu'on ne propose pas à un garçon ou un homme (il peut ajouter l'article dans ses articles perso). */
+const FEMININES: Habitude[] = ['maquillage', 'protections'];
+
+/** Habitudes proposées sur le profil selon l'âge et, s'il est précisé, le sexe. */
+export function habitudesProposees(tranche: TrancheAge, sexe?: Sexe): Habitude[] {
+  return HABITUDES_PAR_AGE[tranche].filter((h) => sexe !== 'M' || !FEMININES.includes(h));
+}
