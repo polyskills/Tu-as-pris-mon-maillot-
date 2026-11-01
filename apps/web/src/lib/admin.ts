@@ -10,6 +10,8 @@ export interface ArticleAdmin extends ArticleCatalogue {
   archive: boolean;
   majLe: string;
   majPar?: string;
+  /** Renvoyé après une modification : nombre de voyages à venir régénérés. */
+  voyagesMisAJour?: number;
 }
 
 export type Action = 'creation' | 'modification' | 'archivage' | 'restauration';
@@ -41,6 +43,11 @@ export const adminApi = {
     api<ArticleAdmin>(`/admin/catalogue/${enc(id)}`, { methode: 'PUT', corps: a }),
   archiver: (id: string) => api<ArticleAdmin>(`/admin/catalogue/${enc(id)}/archiver`, { methode: 'POST' }),
   restaurer: (id: string) => api<ArticleAdmin>(`/admin/catalogue/${enc(id)}/restaurer`, { methode: 'POST' }),
+  deplacer: (id: string, sens: 'haut' | 'bas') =>
+    api<{ articles: ArticleAdmin[]; voyagesMisAJour: number }>(`/admin/catalogue/${enc(id)}/deplacer`, {
+      methode: 'POST',
+      corps: { sens },
+    }),
   historique: (articleId?: string) =>
     api<EntreeHistorique[]>(`/admin/historique${articleId ? `?article=${enc(articleId)}` : ''}`),
   equipe: () => api<Equipier[]>('/admin/equipe'),
@@ -113,3 +120,7 @@ export function preparer(b: Brouillon): Brouillon {
 
 export const dateHeure = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+
+/** « 3 voyages à venir mis à jour » */
+export const voyagesMisAJour = (n = 0) =>
+  n === 0 ? 'Aucun voyage à venir à mettre à jour.' : `${n} voyage${n > 1 ? 's' : ''} à venir mis à jour.`;

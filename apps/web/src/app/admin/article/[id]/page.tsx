@@ -11,7 +11,7 @@ import { ReserveEquipe } from '@/components/admin/ReserveEquipe';
 import { Simulateur } from '@/components/admin/Simulateur';
 import { Contenu, EnTete } from '@/components/Coque';
 import { Bouton, Champ, ChoixUnique, classeSaisie, Interrupteur } from '@/components/ui';
-import { adminApi, ArticleAdmin, Brouillon, dateHeure, PORTEES, preparer } from '@/lib/admin';
+import { adminApi, ArticleAdmin, Brouillon, dateHeure, PORTEES, preparer, voyagesMisAJour } from '@/lib/admin';
 import { useStore } from '@/store/store';
 
 const NOUVEAU: Brouillon = { nom: '', categorie: 'vetements', portee: 'personne' };
@@ -44,7 +44,8 @@ function Section({ titre, children }: { titre: string; children: React.ReactNode
 function Fiche() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const rechargerCatalogue = useStore((s) => s.rechargerCatalogue);
+  // Recharge catalogue et voyages : les voyages à venir viennent d'être mis à jour par le serveur.
+  const recharger = useStore((s) => s.charger);
   const creation = id === 'nouveau';
 
   const [articles, setArticles] = useState<ArticleAdmin[]>();
@@ -92,10 +93,11 @@ function Fiche() {
       setOriginal(a);
       setBrouillon(versBrouillon(a));
       setArticles((liste) => [...(liste ?? []).filter((x) => x.id !== a.id), a]);
-      setMessage({ type: 'ok', texte: succes });
-      void rechargerCatalogue();
+      const texte = `${succes} ${voyagesMisAJour(a.voyagesMisAJour)}`;
+      setMessage({ type: 'ok', texte });
+      void recharger();
       if (creation) {
-        annonce = succes;
+        annonce = texte;
         router.replace(`/admin/article/${a.id}`);
       }
     } catch (e) {
@@ -108,9 +110,7 @@ function Fiche() {
   const enregistrer = () =>
     executer(
       () => (creation ? adminApi.creer(pret) : adminApi.modifier(id, pret)),
-      creation
-        ? 'Article créé : il apparaît dans les nouveaux voyages.'
-        : 'Enregistré. Les voyages existants le prennent à leur prochaine modification.',
+      creation ? 'Article créé.' : 'Enregistré.',
     );
 
   if (!creation && articles && !original) {

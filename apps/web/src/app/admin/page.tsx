@@ -1,17 +1,17 @@
 'use client';
 
 import { CATEGORIES, Categorie, decrireQuand, decrireQuantite } from '@maillot/domain';
-import { ChevronRight, Plus, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Historique } from '@/components/admin/Historique';
 import { ReserveEquipe } from '@/components/admin/ReserveEquipe';
 import { Contenu, EnTete } from '@/components/Coque';
 import { ChoixUnique, classeSaisie } from '@/components/ui';
-import { adminApi, ArticleAdmin } from '@/lib/admin';
+import { adminApi, ArticleAdmin, voyagesMisAJour } from '@/lib/admin';
 import { useStore } from '@/store/store';
 
-const VUES = { articles: 'Articles', historique: 'Dernières modifications' } as const;
+const VUES = { articles: 'Articles', ordre: '↕️ Changer l’ordre', historique: 'Dernières modifications' } as const;
 const FILTRES = {
   tous: 'Tous',
   liste: 'Mis d’office',
@@ -101,6 +101,8 @@ function Catalogue() {
 
           {vue === 'historique' ? (
             <Historique articles={articles ?? []} />
+          ) : vue === 'ordre' ? (
+            <Ordre articles={articles} majArticles={setArticles} />
           ) : (
             <>
               <div className="flex flex-col gap-3 md:flex-row">
@@ -153,6 +155,87 @@ function Catalogue() {
         </div>
       </Contenu>
     </>
+  );
+}
+
+/** Ordre des articles d'une catégorie : c'est l'ordre des listes de valise. */
+function Ordre({ articles, majArticles }: { articles?: ArticleAdmin[]; majArticles: (a: ArticleAdmin[]) => void }) {
+  const recharger = useStore((s) => s.charger);
+  const [categorie, setCategorie] = useState<Categorie>('papiers');
+  const [envoi, setEnvoi] = useState(false);
+  const [message, setMessage] = useState<{ type: 'ok' | 'erreur'; texte: string }>();
+  const liste = (articles ?? []).filter((a) => a.categorie === categorie && !a.archive);
+
+  const deplacer = async (id: string, sens: 'haut' | 'bas') => {
+    setEnvoi(true);
+    try {
+      const res = await adminApi.deplacer(id, sens);
+      majArticles(res.articles);
+      setMessage({ type: 'ok', texte: `Ordre enregistré. ${voyagesMisAJour(res.voyagesMisAJour)}` });
+      void recharger();
+    } catch (e) {
+      setMessage({ type: 'erreur', texte: e instanceof Error ? e.message : 'Erreur' });
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  const fleche = 'rounded-lg p-2 text-accent enabled:hover:bg-accent-clair disabled:opacity-25';
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-discret">
+        Les articles apparaissent dans cet ordre dans les listes de valise, à l’intérieur de leur catégorie.
+      </p>
+      <select
+        className={`${classeSaisie} md:w-72`}
+        value={categorie}
+        onChange={(e) => setCategorie(e.target.value as Categorie)}
+      >
+        {(Object.keys(CATEGORIES) as Categorie[]).map((c) => (
+          <option key={c} value={c}>
+            {CATEGORIES[c]}
+          </option>
+        ))}
+      </select>
+      {message && (
+        <p role="status" className={`text-sm ${message.type === 'ok' ? 'text-succes' : 'text-danger'}`}>
+          {message.texte}
+        </p>
+      )}
+      {!articles ? (
+        <p className="text-discret">Chargement…</p>
+      ) : (
+        <ol className="divide-y divide-bordure rounded-2xl border border-bordure bg-carte">
+          {liste.map((a, i) => (
+            <li key={a.id} className="flex items-center gap-2 py-1.5 pr-2 pl-4">
+              <span className="w-6 shrink-0 text-sm text-discret">{i + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{a.nom}</span>
+                {a.mode && <span className="ml-2 text-xs text-discret">{a.mode === 'suggestion' ? '💡' : '🚗'}</span>}
+              </span>
+              <button
+                type="button"
+                aria-label={`Monter ${a.nom}`}
+                disabled={envoi || i === 0}
+                onClick={() => void deplacer(a.id, 'haut')}
+                className={fleche}
+              >
+                <ArrowUp size={18} />
+              </button>
+              <button
+                type="button"
+                aria-label={`Descendre ${a.nom}`}
+                disabled={envoi || i === liste.length - 1}
+                onClick={() => void deplacer(a.id, 'bas')}
+                className={fleche}
+              >
+                <ArrowDown size={18} />
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 

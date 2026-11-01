@@ -175,3 +175,5 @@ export const schemaEmail = z
   .email()
   .max(255)
   .transform((e) => e.toLowerCase());
+
+export const schemaSens = z.enum(['haut', 'bas']);

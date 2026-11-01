@@ -5,7 +5,14 @@ import { schemaArticleCatalogue } from '../src/validation';
 import { connecter, profil, viderBase, voyagePlage } from './outils';
 
 type Agent = Awaited<ReturnType<typeof connecter>>;
-type Article = { id: string; nom: string };
+type Article = { id: string; nom: string; categorie: string; proprietaire: string };
+type ArticleAdmin = Article & { archive: boolean };
+
+/** Articles de chaque voyage du compte, par identifiant de voyage. */
+async function voyagesDe(agent: Agent): Promise<Record<string, Article[]>> {
+  const etat = await agent.get('/api/etat').expect(200);
+  return Object.fromEntries(etat.body.voyages.map((v: { id: string; articles: Article[] }) => [v.id, v.articles]));
+}
 
 beforeAll(viderBase);
 afterAll(() => prisma.$disconnect());
@@ -89,29 +96,43 @@ describe('administration', () => {
     await admin.put('/api/admin/catalogue/inexistant').send(cerfVolant).expect(404);
   });
 
-  it('modifie, archive et restaure, avec l’historique', async () => {
+  it('applique tout de suite les modifications aux voyages à venir, pas aux voyages passés', async () => {
+    await julie
+      .patch('/api/voyages/voy001/articles/commun:cerf-volant-de-plage')
+      .send({ statut: 'dans-valise' })
+      .expect(200);
+    await julie
+      .post('/api/voyages')
+      .send({ ...voyagePlage('passe1', ['papa1']), depart: '2025-07-10' })
+      .expect(200);
+
     const modifie = await admin
       .put('/api/admin/catalogue/cerf-volant-de-plage')
       .send({ ...cerfVolant, nom: 'Cerf-volant', quantite: { type: 'fixe', n: 2 }, si: [cerfVolant.si] })
       .expect(200);
     expect(modifie.body).toMatchObject({ id: 'cerf-volant-de-plage', nom: 'Cerf-volant', si: cerfVolant.si });
+    expect(modifie.body.voyagesMisAJour).toBe(1);
 
-    // Le voyage prend la modification à sa prochaine régénération.
-    const regenere = await julie
-      .put('/api/voyages/voy001')
-      .send(voyagePlage('voy001', ['papa1']))
-      .expect(200);
-    const article = regenere.body.articles.find((a: Article) => a.id === 'commun:cerf-volant-de-plage');
-    expect(article).toMatchObject({ nom: 'Cerf-volant', quantite: 2 });
+    const voyages = await voyagesDe(julie);
+    expect(voyages.voy001.find((a) => a.id === 'commun:cerf-volant-de-plage')).toMatchObject({
+      nom: 'Cerf-volant',
+      quantite: 2,
+      statut: 'dans-valise',
+    });
+    expect(voyages.passe1.find((a) => a.id === 'commun:cerf-volant-de-plage')?.nom).toBe('Cerf-volant de plage');
+  });
 
+  it('archive et restaure, avec l’historique', async () => {
     await admin.post('/api/admin/catalogue/cerf-volant-de-plage/archiver').expect(200);
     await admin.post('/api/admin/catalogue/cerf-volant-de-plage/archiver').expect(409);
     const servi = await julie.get('/api/catalogue').expect(200);
     expect(servi.body.articles.map((a: Article) => a.id)).not.toContain('cerf-volant-de-plage');
+    expect((await voyagesDe(julie)).voy001.some((a) => a.id === 'commun:cerf-volant-de-plage')).toBe(false);
     const tout = await admin.get('/api/admin/catalogue').expect(200);
     expect(tout.body.find((a: Article) => a.id === 'cerf-volant-de-plage').archive).toBe(true);
 
     await admin.post('/api/admin/catalogue/cerf-volant-de-plage/restaurer').expect(200);
+    expect((await voyagesDe(julie)).voy001.some((a) => a.id === 'commun:cerf-volant-de-plage')).toBe(true);
     const histo = await admin.get('/api/admin/historique?article=cerf-volant-de-plage').expect(200);
     expect(histo.body.map((h: { action: string }) => h.action)).toEqual([
       'restauration',
@@ -121,6 +142,28 @@ describe('administration', () => {
     ]);
     expect(histo.body[2].avant.nom).toBe('Cerf-volant de plage');
     expect(histo.body[2].apres.nom).toBe('Cerf-volant');
+  });
+
+  it('change l’ordre dans une catégorie, et les listes à venir suivent', async () => {
+    const ordre = async () =>
+      ((await admin.get('/api/admin/catalogue').expect(200)).body as ArticleAdmin[])
+        .filter((a) => a.categorie === 'papiers' && !a.archive)
+        .map((a) => a.id);
+    const avant = await ordre();
+    const res = await admin.post(`/api/admin/catalogue/${avant[2]}/deplacer`).send({ sens: 'haut' }).expect(200);
+    expect(res.body.voyagesMisAJour).toBe(1);
+    const apres = await ordre();
+    expect(apres).toEqual([avant[0], avant[2], avant[1], ...avant.slice(3)]);
+
+    await admin.post(`/api/admin/catalogue/${avant[0]}/deplacer`).send({ sens: 'haut' }).expect(200);
+    expect(await ordre()).toEqual(apres);
+    await admin.post(`/api/admin/catalogue/${avant[0]}/deplacer`).send({ sens: 'gauche' }).expect(400);
+    await julie.post(`/api/admin/catalogue/${avant[0]}/deplacer`).send({ sens: 'bas' }).expect(403);
+
+    const papiers = (await voyagesDe(julie)).voy001
+      .filter((a) => a.categorie === 'papiers' && a.proprietaire === 'papa1')
+      .map((a) => a.id.split(':')[1]);
+    expect(papiers).toEqual(apres.filter((id) => papiers.includes(id)));
   });
 
   it('gère l’équipe : un éditeur modifie le catalogue, pas l’équipe', async () => {

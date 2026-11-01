@@ -160,6 +160,8 @@ model ArticleVoyage {
   ajuste       Boolean @default(false)
   listeChoisie Boolean @default(false)
   achetable    Boolean @default(false)
+  /// Position dans la liste (ordre du catalogue, puis ajouts)
+  rang         Int     @default(0)
   voyage       Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
 
   @@id([voyageId, id])

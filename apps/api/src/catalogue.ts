@@ -3,10 +3,10 @@ import { prisma } from './db';
 import { env } from './env';
 import { Prisma } from './generated/prisma/client';
 import { Conflit, Introuvable } from './erreurs';
-import { schemaArticleCatalogue, schemaEmail, schemaEquipier } from './validation';
+import { schemaArticleCatalogue, schemaEmail, schemaEquipier, schemaSens } from './validation';
 
 // Catalogue en service : en base, gardé en mémoire (un seul processus) et rechargé après chaque modification.
-// Les voyages existants prennent les changements à leur prochaine régénération (voyage ou profil modifié).
+// Après chaque modification, les routes d'administration régénèrent les voyages à venir (donnees.regenererVoyagesAVenir).
 
 type Ligne = Prisma.CatalogueArticleGetPayload<object>;
 export type Role = 'admin' | 'editeur';
@@ -200,6 +200,28 @@ export async function archiverArticle(auteur: string, id: string, archive: boole
   });
   oublierCatalogue();
   return versAdmin(ligne);
+}
+
+/** Échange la place de l'article avec son voisin (même catégorie, en service). Renvoie le catalogue complet. */
+export async function deplacerArticle(id: string, sens: unknown) {
+  const s = schemaSens.parse(sens);
+  await prisma.$transaction(async (tx) => {
+    const article = await ligneDe(tx, id);
+    if (article.archive) throw new Conflit('Article archivé');
+    const voisin = await tx.catalogueArticle.findFirst({
+      where: {
+        categorie: article.categorie,
+        archive: false,
+        ordre: s === 'haut' ? { lt: article.ordre } : { gt: article.ordre },
+      },
+      orderBy: { ordre: s === 'haut' ? 'desc' : 'asc' },
+    });
+    if (!voisin) return;
+    await tx.catalogueArticle.update({ where: { id: article.id }, data: { ordre: voisin.ordre } });
+    await tx.catalogueArticle.update({ where: { id: voisin.id }, data: { ordre: article.ordre } });
+  });
+  oublierCatalogue();
+  return listerAdmin();
 }
 
 export async function historique(articleId?: string) {

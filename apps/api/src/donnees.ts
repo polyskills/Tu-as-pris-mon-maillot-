@@ -25,6 +25,8 @@ type Tx = Prisma.TransactionClient;
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 type LigneProfil = Prisma.ProfilGetPayload<object>;
 type LigneVoyage = Prisma.VoyageGetPayload<{ include: { articles: true } }>;
+/** Articles d'un voyage dans l'ordre de la liste. */
+const avecArticles = { articles: { orderBy: [{ rang: 'asc' as const }, { id: 'asc' as const }] } };
 type LigneArticle = Prisma.ArticleVoyageGetPayload<object>;
 
 // --- Conversion base ↔ moteur de règles ---
@@ -85,8 +87,9 @@ const colonnesParametres = (p: ParametresVoyage) => ({
   participants: json(p.participants),
 });
 
-const colonnesArticle = (voyageId: string, a: ArticleVoyage) => ({
+const colonnesArticle = (voyageId: string, a: ArticleVoyage, rang: number) => ({
   voyageId,
+  rang,
   id: a.id,
   nom: a.nom,
   categorie: a.categorie,
@@ -102,7 +105,14 @@ const colonnesArticle = (voyageId: string, a: ArticleVoyage) => ({
 
 async function remplacerArticles(tx: Tx, voyageId: string, articles: ArticleVoyage[]) {
   await tx.articleVoyage.deleteMany({ where: { voyageId } });
-  if (articles.length) await tx.articleVoyage.createMany({ data: articles.map((a) => colonnesArticle(voyageId, a)) });
+  if (articles.length)
+    await tx.articleVoyage.createMany({ data: articles.map((a, i) => colonnesArticle(voyageId, a, i)) });
+}
+
+/** Rang d'un article ajouté : en fin de liste. */
+async function rangSuivant(voyageId: string) {
+  const { _max } = await prisma.articleVoyage.aggregate({ where: { voyageId }, _max: { rang: true } });
+  return (_max.rang ?? -1) + 1;
 }
 
 async function profilsDe(tx: Tx, familleId: string) {
@@ -110,7 +120,7 @@ async function profilsDe(tx: Tx, familleId: string) {
 }
 
 async function voyageDe(tx: Tx, familleId: string, voyageId: string) {
-  const ligne = await tx.voyage.findFirst({ where: { id: voyageId, familleId }, include: { articles: true } });
+  const ligne = await tx.voyage.findFirst({ where: { id: voyageId, familleId }, include: avecArticles });
   if (!ligne) throw new Introuvable('Voyage introuvable');
   return versVoyage(ligne);
 }
@@ -134,7 +144,7 @@ export async function familleDuCompte(userId: string): Promise<string> {
 export async function etat(familleId: string) {
   const [profils, voyages] = await Promise.all([
     profilsDe(prisma, familleId),
-    prisma.voyage.findMany({ where: { familleId }, include: { articles: true }, orderBy: { creeLe: 'desc' } }),
+    prisma.voyage.findMany({ where: { familleId }, include: avecArticles, orderBy: { creeLe: 'desc' } }),
   ]);
   return { profils, voyages: voyages.map(versVoyage) };
 }
@@ -184,7 +194,7 @@ async function regenererVoyagesDe(
 ) {
   const profils = await profilsDe(tx, familleId);
   const catalogue = await articlesEnService();
-  const lignes = await tx.voyage.findMany({ where: { familleId }, include: { articles: true } });
+  const lignes = await tx.voyage.findMany({ where: { familleId }, include: avecArticles });
   for (const v of lignes.map(versVoyage).filter(concerne).map(transformer)) {
     const articles = fusionner(v.articles, genererArticles(v, profils, catalogue), v.participants);
     await tx.voyage.update({ where: { id: v.id }, data: { participants: json(v.participants) } });
@@ -196,7 +206,7 @@ async function etatTx(tx: Tx, familleId: string) {
   const profils = await profilsDe(tx, familleId);
   const voyages = await tx.voyage.findMany({
     where: { familleId },
-    include: { articles: true },
+    include: avecArticles,
     orderBy: { creeLe: 'desc' },
   });
   return { profils, voyages: voyages.map(versVoyage) };
@@ -280,7 +290,7 @@ export async function ajouterArticle(familleId: string, voyageId: string, donnee
     liste: a.liste,
     origine: 'ajout',
   };
-  await prisma.articleVoyage.create({ data: colonnesArticle(voyageId, article) });
+  await prisma.articleVoyage.create({ data: colonnesArticle(voyageId, article, await rangSuivant(voyageId)) });
   return article;
 }
 
@@ -294,7 +304,7 @@ export async function ajouterSuggestion(familleId: string, voyageId: string, sug
     voyage.articles,
   ).find((s) => s.id === suggestionId);
   if (!suggestion) throw new Introuvable('Suggestion introuvable');
-  await prisma.articleVoyage.create({ data: colonnesArticle(voyageId, suggestion) });
+  await prisma.articleVoyage.create({ data: colonnesArticle(voyageId, suggestion, await rangSuivant(voyageId)) });
   return suggestion;
 }
 
@@ -305,6 +315,40 @@ export async function supprimerArticle(familleId: string, voyageId: string, arti
     where: { voyageId, id: articleId, origine: { in: ['ajout', 'suggestion'] } },
   });
   if (!count) throw new Introuvable('Article introuvable ou non supprimable');
+}
+
+// --- Après une modification du catalogue ---
+
+/** Date du jour (AAAA-MM-JJ) selon l'heure du serveur. */
+const aujourdhui = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * Régénère la liste de tous les voyages à venir (départ aujourd'hui ou plus tard), toutes familles confondues,
+ * avec le catalogue en service. Pointage, quantités ajustées et ajouts sont gardés. Renvoie le nombre de voyages.
+ */
+export async function regenererVoyagesAVenir(): Promise<number> {
+  const catalogue = await articlesEnService();
+  const aRegenerer = await prisma.voyage.findMany({
+    where: { depart: { gte: aujourdhui() } },
+    select: { id: true, familleId: true },
+  });
+  const profilsParFamille = new Map<string, Profil[]>();
+  for (const { id, familleId } of aRegenerer) {
+    if (!profilsParFamille.has(familleId)) profilsParFamille.set(familleId, await profilsDe(prisma, familleId));
+    const profils = profilsParFamille.get(familleId)!;
+    await prisma.$transaction(async (tx) => {
+      // Verrouille les articles du voyage : un pointage envoyé pendant la régénération attend au lieu d'être perdu.
+      await tx.$queryRaw`SELECT id FROM article_voyage WHERE voyageId = ${id} FOR UPDATE`;
+      const ligne = await tx.voyage.findUnique({ where: { id }, include: avecArticles });
+      if (!ligne) return;
+      const v = versVoyage(ligne);
+      await remplacerArticles(tx, id, fusionner(v.articles, genererArticles(v, profils, catalogue), v.participants));
+    });
+  }
+  return aRegenerer.length;
 }
 
 // --- Reprise des données saisies dans le navigateur ---

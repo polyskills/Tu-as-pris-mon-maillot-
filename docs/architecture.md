@@ -35,8 +35,12 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   d'environnement. Évolutions de base versionnées (migrations Prisma).
 - **Catalogue en base** : importé une fois depuis `shared/domain/src/catalogue.ts` (catalogue de départ), puis modifié
   dans l'administration. L'API le garde en mémoire et le recharge après chaque modification ; l'interface le reçoit par
-  `GET /api/catalogue` et génère les listes avec. Les voyages existants prennent les changements à leur prochaine
-  modification (voyage ou profil). Un article archivé disparaît des listes régénérées, pointage compris.
+  `GET /api/catalogue` et génère les listes avec. Chaque modification du catalogue (création, modification,
+  archivage, restauration, ordre) régénère tout de suite les **voyages à venir** (départ aujourd'hui ou plus tard), en
+  gardant pointage, quantités ajustées et ajouts ; les voyages passés ne bougent pas. Un article archivé disparaît des
+  listes régénérées, pointage compris.
+- **Ordre** : l'ordre du catalogue (réglable par catégorie dans l'administration) est l'ordre des listes de valise.
+  Chaque article de voyage garde son rang (`article_voyage.rang`).
 - **Administration** (`/admin`) : rôles **admin** (catalogue + équipe) et **éditeur** (catalogue). Admins d'office :
   variable `ADMIN_EMAILS`. Pas de suppression définitive : archivage et restauration, historique avant / après.
 - **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.

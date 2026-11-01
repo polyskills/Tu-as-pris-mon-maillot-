@@ -177,6 +177,12 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
       next(roles.includes(res.locals.role) ? undefined : new Interdit());
   const auteur = (res: Response) => res.locals.email as string;
 
+  // Chaque modification du catalogue s'applique tout de suite aux voyages à venir.
+  const puisRegenerer = async <T extends object>(ecriture: Promise<T>) => {
+    const resultat = await ecriture;
+    return { ...resultat, voyagesMisAJour: await donnees.regenererVoyagesAVenir() };
+  };
+
   app.use('/api/admin', exiger('admin', 'editeur'));
   app.get(
     '/api/admin/catalogue',
@@ -184,19 +190,26 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   );
   app.post(
     '/api/admin/catalogue',
-    route(async (req, res) => catalogue.creerArticle(auteur(res), req.body)),
+    route(async (req, res) => puisRegenerer(catalogue.creerArticle(auteur(res), req.body))),
   );
   app.put(
     '/api/admin/catalogue/:id',
-    route(async (req, res) => catalogue.modifierArticle(auteur(res), param(req, 'id'), req.body)),
+    route(async (req, res) => puisRegenerer(catalogue.modifierArticle(auteur(res), param(req, 'id'), req.body))),
   );
   app.post(
     '/api/admin/catalogue/:id/archiver',
-    route(async (req, res) => catalogue.archiverArticle(auteur(res), param(req, 'id'), true)),
+    route(async (req, res) => puisRegenerer(catalogue.archiverArticle(auteur(res), param(req, 'id'), true))),
   );
   app.post(
     '/api/admin/catalogue/:id/restaurer',
-    route(async (req, res) => catalogue.archiverArticle(auteur(res), param(req, 'id'), false)),
+    route(async (req, res) => puisRegenerer(catalogue.archiverArticle(auteur(res), param(req, 'id'), false))),
+  );
+  app.post(
+    '/api/admin/catalogue/:id/deplacer',
+    route(async (req) => {
+      const articles = await catalogue.deplacerArticle(param(req, 'id'), req.body?.sens);
+      return { articles, voyagesMisAJour: await donnees.regenererVoyagesAVenir() };
+    }),
   );
   app.get(
     '/api/admin/historique',

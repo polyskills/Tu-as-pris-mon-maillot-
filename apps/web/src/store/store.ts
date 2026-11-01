@@ -35,7 +35,6 @@ interface Etat extends EtatServeur {
   erreur?: string;
 
   charger: () => Promise<void>;
-  rechargerCatalogue: () => Promise<void>;
   effacerErreur: () => void;
   importer: (donnees: EtatServeur) => Promise<void>;
 
@@ -125,10 +124,6 @@ export const useStore = create<Etat>()((set, get) => {
     catalogue: [],
 
     charger,
-    rechargerCatalogue: async () => {
-      const { articles } = await api<Catalogue>('/catalogue');
-      set({ catalogue: articles });
-    },
     effacerErreur: () => set({ erreur: undefined }),
 
     importer: async (donnees) => {
