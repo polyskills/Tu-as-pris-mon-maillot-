@@ -5,6 +5,7 @@ import {
   fusionner,
   genererArticles,
   genererSuggestions,
+  HABITUDES_PAR_AGE,
   habitudesParDefaut,
   progression,
   responsable,
@@ -138,7 +139,9 @@ describe('genererArticles', () => {
 
   it("n'exige la carte d'identité des enfants qu'en avion ou hors de France", () => {
     expect(trouve(articles, 'lea:carte-identite')).toBeUndefined();
-    expect(trouve(genererArticles({ ...plage, transports: ['avion'] }, famille, CATALOGUE), 'lea:carte-identite')).toBeDefined();
+    expect(
+      trouve(genererArticles({ ...plage, transports: ['avion'] }, famille, CATALOGUE), 'lea:carte-identite'),
+    ).toBeDefined();
   });
 
   it("ajoute les affaires communes liées à l'âge d'un participant", () => {
@@ -209,7 +212,7 @@ describe('listes valise / courses / voiture', () => {
     expect(trouve(liste, 'commun:sieges-auto')?.liste).toBe('voiture');
   });
 
-  it("passe les articles achetables en liste de courses en avion, sans check-list voiture", () => {
+  it('passe les articles achetables en liste de courses en avion, sans check-list voiture', () => {
     const liste = genererArticles({ ...plage, transports: ['avion'] }, famille, CATALOGUE);
     expect(trouve(liste, 'bebe:couches')?.liste).toBe('courses');
     expect(trouve(liste, 'commun:creme-solaire')?.liste).toBe('courses');
@@ -222,7 +225,7 @@ describe('genererSuggestions', () => {
   it('propose les suggestions du voyage qui ne sont pas déjà dans la liste', () => {
     const articles = genererArticles(plage, famille, CATALOGUE);
     const suggestions = genererSuggestions(plage, famille, CATALOGUE, articles);
-    expect(noms(suggestions)).toContain('Chaussures d\'eau');
+    expect(noms(suggestions)).toContain("Chaussures d'eau");
     expect(noms(suggestions)).toContain('Enceinte Bluetooth');
     expect(noms(suggestions)).not.toContain('Cadenas de valise');
     expect(suggestions.every((s) => s.origine === 'suggestion')).toBe(true);
@@ -237,9 +240,9 @@ describe('genererSuggestions', () => {
     const articles = genererArticles(plage, famille, CATALOGUE);
     expect(noms(genererSuggestions(plage, famille, CATALOGUE, articles))).not.toContain('Thermomètre');
     const adultes = { ...plage, participants: ['papa', 'maman'] };
-    expect(noms(genererSuggestions(adultes, famille, CATALOGUE, genererArticles(adultes, famille, CATALOGUE)))).toContain(
-      'Thermomètre',
-    );
+    expect(
+      noms(genererSuggestions(adultes, famille, CATALOGUE, genererArticles(adultes, famille, CATALOGUE))),
+    ).toContain('Thermomètre');
   });
 });
 
@@ -264,7 +267,9 @@ describe('fusionner', () => {
       liste: 'valise',
       origine: 'ajout',
     };
-    const suggestion = genererSuggestions(plage, famille, CATALOGUE, avant).find((s) => s.nom === 'Enceinte Bluetooth')!;
+    const suggestion = genererSuggestions(plage, famille, CATALOGUE, avant).find(
+      (s) => s.nom === 'Enceinte Bluetooth',
+    )!;
     avant.push(ajout, suggestion);
 
     const plusLong = { ...plage, nuits: 14 };
@@ -309,5 +314,24 @@ describe('effet du tri sur Biarritz', () => {
   it('reste sous les 150 lignes dans la valise', () => {
     const valise = genererArticles(plage, famille, CATALOGUE).filter((a) => a.liste === 'valise');
     expect(valise.length).toBeLessThan(150);
+  });
+});
+
+describe('HABITUDES_PAR_AGE', () => {
+  it('ne propose pas les habitudes de bébé à un adulte, ni le rasage à un bébé', () => {
+    expect(HABITUDES_PAR_AGE.adulte).not.toContain('couches');
+    expect(HABITUDES_PAR_AGE.adulte).not.toContain('biberon');
+    expect(HABITUDES_PAR_AGE.adulte).toContain('lunettes');
+    expect(HABITUDES_PAR_AGE.bebe).toContain('couches');
+    expect(HABITUDES_PAR_AGE.bebe).not.toContain('rasage');
+  });
+
+  it('couvre toutes les habitudes pré-cochées selon l’âge', () => {
+    for (const [annee, tranche] of [
+      [2026, 'bebe'],
+      [2023, 'enfant'],
+    ] as const) {
+      for (const h of habitudesParDefaut(annee, 2026)) expect(HABITUDES_PAR_AGE[tranche]).toContain(h);
+    }
   });
 });

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { COULEURS_PROFIL, useCouleurs } from '../../components/theme';
 import { Avatar, Bouton, Champ, ChoixPuces, couleurProfil, Saisie, useStyles } from '../../components/ui';
-import { habitudesParDefaut } from '../../domain/generer';
+import { HABITUDES_PAR_AGE, habitudesParDefaut, trancheAge } from '../../domain/generer';
 import { CATEGORIES, HABITUDES } from '../../domain/libelles';
 import { ArticlePerso, Categorie, Habitude, Profil } from '../../domain/types';
 import { nouvelId, useStore } from '../../store/store';
@@ -52,6 +52,12 @@ export default function EditionProfil() {
   const anneeNum = Number(annee);
   const anneeValide = /^\d{4}$/.test(annee) && anneeNum > 1900 && anneeNum <= new Date().getFullYear();
   const valide = prenom.trim().length > 0 && anneeValide;
+  const tranche = anneeValide ? trancheAge(anneeNum, new Date().toISOString().slice(0, 10)) : undefined;
+  // Seules les habitudes de la tranche d'âge sont proposées et enregistrées.
+  const proposees = tranche
+    ? (Object.fromEntries(HABITUDES_PAR_AGE[tranche].map((h) => [h, HABITUDES[h]])) as Record<Habitude, string>)
+    : undefined;
+  const habitudesRetenues = tranche ? habitudes.filter((h) => HABITUDES_PAR_AGE[tranche].includes(h)) : habitudes;
 
   const valider = () => {
     const profil: Profil = {
@@ -59,7 +65,7 @@ export default function EditionProfil() {
       prenom: prenom.trim(),
       couleur,
       anneeNaissance: anneeNum,
-      habitudes,
+      habitudes: habitudesRetenues,
       responsabilites,
       articlesPerso,
     };
@@ -114,14 +120,18 @@ export default function EditionProfil() {
       </Champ>
 
       <Champ libelle="Habitudes et besoins">
-        <ChoixPuces
-          options={HABITUDES}
-          valeur={habitudes}
-          onChange={(h) => {
-            setHabitudes(h);
-            setHabitudesTouchees(true);
-          }}
-        />
+        {proposees ? (
+          <ChoixPuces
+            options={proposees}
+            valeur={habitudesRetenues}
+            onChange={(h) => {
+              setHabitudes(h);
+              setHabitudesTouchees(true);
+            }}
+          />
+        ) : (
+          <Text style={s.discret}>Indique l’année de naissance pour voir les habitudes adaptées à l’âge.</Text>
+        )}
       </Champ>
 
       <Champ

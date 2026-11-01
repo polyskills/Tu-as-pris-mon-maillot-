@@ -59,7 +59,11 @@ export function joursComptes(nuits: number, machineALaver: boolean): number {
   return machineALaver ? Math.min(jours, 7) : jours;
 }
 
-export function calculerQuantite(regle: RegleQuantite | undefined, v: ParametresVoyage, nbParticipants: number): number {
+export function calculerQuantite(
+  regle: RegleQuantite | undefined,
+  v: ParametresVoyage,
+  nbParticipants: number,
+): number {
   if (!regle) return 1;
   switch (regle.type) {
     case 'fixe':
@@ -85,7 +89,12 @@ function listePour(article: ArticleCatalogue, v: ParametresVoyage): Liste {
 }
 
 /** Parcourt le catalogue et produit un article par propriétaire concerné. */
-function appliquer(v: ParametresVoyage, profils: Profil[], catalogue: ArticleCatalogue[], origine: ArticleVoyage['origine']) {
+function appliquer(
+  v: ParametresVoyage,
+  profils: Profil[],
+  catalogue: ArticleCatalogue[],
+  origine: ArticleVoyage['origine'],
+) {
   const participants = profils.filter((p) => v.participants.includes(p.id));
   const resultat: ArticleVoyage[] = [];
   if (participants.length === 0) return resultat;
@@ -124,7 +133,11 @@ function appliquer(v: ParametresVoyage, profils: Profil[], catalogue: ArticleCat
 }
 
 /** Génère la liste d'un voyage (valise, courses, check-list voiture) à partir du catalogue et des profils. */
-export function genererArticles(v: ParametresVoyage, profils: Profil[], catalogue: ArticleCatalogue[]): ArticleVoyage[] {
+export function genererArticles(
+  v: ParametresVoyage,
+  profils: Profil[],
+  catalogue: ArticleCatalogue[],
+): ArticleVoyage[] {
   const resultat = appliquer(
     v,
     profils,
@@ -170,7 +183,11 @@ export function genererSuggestions(
  * Régénère la liste après une modification du voyage ou des profils,
  * sans perdre ce qui a déjà été pointé, les choix manuels ni les ajouts.
  */
-export function fusionner(anciens: ArticleVoyage[], nouveaux: ArticleVoyage[], participants: string[]): ArticleVoyage[] {
+export function fusionner(
+  anciens: ArticleVoyage[],
+  nouveaux: ArticleVoyage[],
+  participants: string[],
+): ArticleVoyage[] {
   const parId = new Map(anciens.map((a) => [a.id, a]));
   const fusion = nouveaux.map((n) => {
     const ancien = parId.get(n.id);
@@ -218,3 +235,16 @@ export function habitudesParDefaut(anneeNaissance: number, anneeCourante: number
   if (age < 6) habitudes.push('ne-nage-pas');
   return habitudes;
 }
+
+const SANTE: Habitude[] = ['lunettes', 'traitement', 'allergies', 'mal-transports'];
+const LOISIRS: Habitude[] = ['lecture', 'photo', 'jeux-video'];
+const GRAND: Habitude[] = ['lentilles', 'rasage', 'maquillage', 'protections', 'cheveux-longs', 'appareil-dentaire'];
+
+/** Habitudes proposées sur le profil selon la tranche d'âge (pas de « Couches » pour un adulte, etc.). */
+export const HABITUDES_PAR_AGE: Record<TrancheAge, Habitude[]> = {
+  bebe: [...SANTE, 'couches', 'biberon', 'repas-bebe', 'allaitement', 'tetine', 'doudou', 'ne-nage-pas'],
+  enfant: [...SANTE, 'cheveux-longs', 'appareil-dentaire', 'couches', 'tetine', 'doudou', 'ne-nage-pas', ...LOISIRS],
+  ado: [...SANTE, ...GRAND, 'doudou', ...LOISIRS],
+  adulte: [...SANTE, ...GRAND, ...LOISIRS],
+  senior: [...SANTE, ...GRAND, ...LOISIRS],
+};
