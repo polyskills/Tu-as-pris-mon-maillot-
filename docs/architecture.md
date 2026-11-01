@@ -43,6 +43,11 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   Chaque article de voyage garde son rang (`article_voyage.rang`).
 - **Administration** (`/admin`) : rôles **admin** (catalogue + équipe) et **éditeur** (catalogue). Admins d'office :
   variable `ADMIN_EMAILS`. Pas de suppression définitive : archivage et restauration, historique avant / après.
+- **Partage de la famille** : un compte appartient à une seule famille. Celui qui l'a créée (propriétaire) invite
+  d'autres adresses e-mail et peut retirer des membres ; les membres voient et modifient tout (profils, voyages,
+  pointage) et peuvent quitter la famille (ils repartent d'une famille vide). En acceptant une invitation, les profils
+  et voyages du compte rejoignent la famille partagée (rien n'est perdu). L'interface relit les données toutes les
+  10 s quand l'onglet est visible, et dès qu'on y revient : chacun voit le pointage des autres.
 - **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.
 - **Migration de la base** vers un MySQL géré (OVHcloud, Scaleway…) si le produit se développe : copie des données
   + changement de l'URL de connexion.
@@ -64,7 +69,8 @@ Thème clair / sombre selon le réglage de l'appareil.
 3. ✅ Conformité au kit Polytools Admin v2 (pnpm, processus unique, variables, en-têtes, journaux)
 4. ✅ Interface branchée sur l'API : connexion par lien, données sur le serveur, pointage instantané, récupération des données du navigateur
 5. ✅ Catalogue en base + **Administration** (éditeur de règles, simulateur, archivage, historique, équipe)
-6. Partage de la famille et pointage à plusieurs
+6. ✅ Partage de la famille (invitation par e-mail) et pointage à plusieurs (relecture régulière). Pistes : afficher
+   qui a coché quoi, mise à jour instantanée (SSE), transfert du rôle de propriétaire
 7. Application web installable (PWA) + mode hors ligne pour le pointage sur téléphone ; stores plus tard si besoin
 8. Ouverture publique : sécurité (limitation de requêtes, en-têtes, fail2ban), sauvegardes hors du VPS, pages légales
    et RGPD, freemium (paiement)

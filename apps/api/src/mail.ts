@@ -34,3 +34,26 @@ export async function envoyerLienConnexion(email: string, url: string) {
     html: `<p>Bonjour,</p><p>Pour te connecter, clique sur ce lien (valable 15 minutes) :</p><p><a href="${url}">Me connecter</a></p><p>Si tu n'as rien demandé, ignore ce message.</p>`,
   });
 }
+
+/** Dernière invitation envoyée par adresse (tests). */
+export const dernieresInvitations = new Map<string, string>();
+
+const echapper = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+/** Prévient une personne invitée à partager une famille. Le lien mène à l'outil : elle s'y connecte avec cette adresse. */
+export async function envoyerInvitation(email: string, invitePar: string) {
+  dernieresInvitations.set(email, invitePar);
+  const url = env.PUBLIC_URL;
+  if (!transport) {
+    journal.info({ email, invitePar }, 'Invitation à partager une famille (SMTP non configuré)');
+    return;
+  }
+  await transport.sendMail({
+    from: env.MAIL_FROM,
+    to: email,
+    subject: `${invitePar} t'invite à préparer les valises ensemble`,
+    text: `Bonjour,\n\n${invitePar} t'invite à partager sa famille sur « Tu as pris mon maillot ? » : mêmes profils, mêmes voyages, et chacun coche ce qu'il met dans la valise.\n\nPour accepter, connecte-toi avec cette adresse (${email}) :\n${url}\n\nSi tu ne connais pas cette personne, ignore ce message.`,
+    html: `<p>Bonjour,</p><p><strong>${echapper(invitePar)}</strong> t'invite à partager sa famille sur « Tu as pris mon maillot ? » : mêmes profils, mêmes voyages, et chacun coche ce qu'il met dans la valise.</p><p>Pour accepter, connecte-toi avec cette adresse (${echapper(email)}) :</p><p><a href="${url}">Ouvrir Tu as pris mon maillot ?</a></p><p>Si tu ne connais pas cette personne, ignore ce message.</p>`,
+  });
+}

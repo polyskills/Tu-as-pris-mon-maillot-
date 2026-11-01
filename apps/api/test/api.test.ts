@@ -25,6 +25,13 @@ describe('accès', () => {
     expect(moi.body.email).toBe('julie@example.com');
     await agent.get('/api/etat').expect(200, { profils: [], voyages: [] });
   });
+
+  it('crée une seule famille quand la première connexion envoie plusieurs requêtes à la fois', async () => {
+    const agent = await connecter('parallele@example.com');
+    const reponses = await Promise.all([agent.get('/api/moi'), agent.get('/api/moi'), agent.get('/api/moi')]);
+    expect(new Set(reponses.map((r) => r.body.familleId)).size).toBe(1);
+    expect(await prisma.membre.count({ where: { user: { email: 'parallele@example.com' } } })).toBe(1);
+  });
 });
 
 describe('famille, voyage et pointage', () => {

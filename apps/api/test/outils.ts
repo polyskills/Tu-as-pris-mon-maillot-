@@ -13,6 +13,7 @@ export async function viderBase() {
     'catalogue_historique',
     'catalogue_article',
     'equipier',
+    'invitation',
     'article_voyage',
     'voyage',
     'profil',

@@ -10,6 +10,7 @@ import * as donnees from './donnees';
 import { Conflit, Interdit, Introuvable, NonConnecte } from './erreurs';
 import { env } from './env';
 import { journal } from './journal';
+import * as partage from './partage';
 
 // Réponses : les données directement en cas de succès, { erreur: { code, message } } sinon.
 
@@ -99,6 +100,7 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
       .getSession({ headers: fromNodeHeaders(req.headers) })
       .then(async (session) => {
         if (!session) return next(new NonConnecte());
+        res.locals.userId = session.user.id;
         res.locals.familleId = await donnees.familleDuCompte(session.user.id);
         res.locals.email = session.user.email;
         res.locals.role = await catalogue.roleDe(session.user.email);
@@ -108,14 +110,53 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
   });
 
   const famille = (res: Response) => res.locals.familleId as string;
+  const compte = (res: Response) => res.locals.userId as string;
+  const email = (res: Response) => res.locals.email as string;
 
   app.get(
     '/api/moi',
     route(async (req, res) => ({
-      email: res.locals.email as string,
+      email: email(res),
       familleId: famille(res),
       ...(res.locals.role && { role: res.locals.role as catalogue.Role }),
+      invitations: await partage.invitationsRecues(email(res), famille(res)),
     })),
+  );
+
+  // --- Partage de la famille ---
+  app.get(
+    '/api/famille/partage',
+    route(async (req, res) => partage.partage(compte(res), famille(res))),
+  );
+  app.post(
+    '/api/famille/invitations',
+    route(async (req, res) => partage.inviter(compte(res), famille(res), email(res), req.body)),
+  );
+  app.delete(
+    '/api/famille/invitations/:email',
+    route(async (req, res) => partage.annulerInvitation(compte(res), famille(res), param(req, 'email'))),
+  );
+  app.delete(
+    '/api/famille/membres/:email',
+    route(async (req, res) => partage.retirerMembre(compte(res), famille(res), param(req, 'email'))),
+  );
+  app.post(
+    '/api/famille/quitter',
+    route(async (req, res) => {
+      await partage.quitter(compte(res), famille(res));
+      return donnees.etat(await donnees.familleDuCompte(compte(res)));
+    }),
+  );
+  app.post(
+    '/api/invitations/:id/accepter',
+    route(async (req, res) => {
+      const rejointe = await partage.accepter(compte(res), email(res), famille(res), param(req, 'id'));
+      return donnees.etat(rejointe);
+    }),
+  );
+  app.post(
+    '/api/invitations/:id/refuser',
+    route(async (req, res) => partage.refuser(email(res), param(req, 'id'))),
   );
   // Catalogue en service : l'interface génère les listes avec, comme le serveur.
   app.get(
@@ -242,7 +283,7 @@ export function creerApp(pages?: (req: Request, res: Response) => unknown) {
     if (err instanceof NonConnecte) {
       res.status(401).json({ erreur: { code: 'non-connecte', message: 'Connexion requise' } });
     } else if (err instanceof Interdit) {
-      res.status(403).json({ erreur: { code: 'interdit', message: 'Accès réservé à l’équipe du catalogue' } });
+      res.status(403).json({ erreur: { code: 'interdit', message: err.message } });
     } else if (err instanceof z.ZodError) {
       res.status(400).json({
         erreur: { code: 'invalide', message: 'Données invalides', details: z.flattenError(err).fieldErrors },

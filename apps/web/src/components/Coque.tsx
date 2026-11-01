@@ -37,6 +37,23 @@ export function Coque({ children }: { children: ReactNode }) {
     void charger();
   }, [charger]);
 
+  // Famille partagée : relit régulièrement les données (pointage des autres membres), seulement quand
+  // l'onglet est visible, et aussitôt qu'on y revient.
+  useEffect(() => {
+    if (statut !== 'pret') return;
+    const relire = () => {
+      if (document.visibilityState === 'visible') void useStore.getState().rafraichir();
+    };
+    const minuterie = setInterval(relire, INTERVALLE_RELECTURE);
+    document.addEventListener('visibilitychange', relire);
+    window.addEventListener('focus', relire);
+    return () => {
+      clearInterval(minuterie);
+      document.removeEventListener('visibilitychange', relire);
+      window.removeEventListener('focus', relire);
+    };
+  }, [statut]);
+
   useEffect(() => {
     if (statut === 'deconnecte' && !surConnexion) router.replace('/connexion');
     if (statut === 'pret' && surConnexion) router.replace('/');
@@ -51,7 +68,14 @@ export function Coque({ children }: { children: ReactNode }) {
 
   const seDeconnecter = async () => {
     await deconnecter().catch(() => undefined);
-    useStore.setState({ statut: 'deconnecte', profils: [], voyages: [], email: undefined, role: undefined });
+    useStore.setState({
+      statut: 'deconnecte',
+      profils: [],
+      voyages: [],
+      invitations: [],
+      email: undefined,
+      role: undefined,
+    });
   };
 
   return (
@@ -88,6 +112,7 @@ export function Coque({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
+        <InvitationsRecues />
         <RepriseNavigateur />
         {children}
         <div className="mx-auto w-full max-w-6xl px-4 pb-6 md:hidden">
@@ -134,6 +159,64 @@ function MessageErreur() {
       <button type="button" aria-label="Fermer" onClick={effacer} className="text-discret">
         <X size={18} />
       </button>
+    </div>
+  );
+}
+
+/** Toutes les 10 secondes : assez pour voir le pointage des autres sans surcharger le serveur. */
+const INTERVALLE_RELECTURE = 10_000;
+
+/** Invitations à rejoindre la famille d'un autre compte : accepter ou refuser. */
+function InvitationsRecues() {
+  const invitations = useStore((s) => s.invitations);
+  const vide = useStore((s) => s.profils.length === 0 && s.voyages.length === 0);
+  const accepter = useStore((s) => s.accepterInvitation);
+  const refuser = useStore((s) => s.refuserInvitation);
+  const [occupe, setOccupe] = useState(false);
+  const [erreur, setErreur] = useState<string>();
+
+  if (!invitations.length) return null;
+
+  const agir = async (action: () => Promise<void>) => {
+    setOccupe(true);
+    setErreur(undefined);
+    try {
+      await action();
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setOccupe(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto mt-4 flex w-full max-w-6xl flex-col gap-3 px-4 md:px-8">
+      {invitations.map((i) => (
+        <div
+          key={i.id}
+          className="flex flex-col gap-3 rounded-2xl border border-accent bg-accent-clair p-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex-1">
+            <p>
+              <strong>{i.invitePar}</strong> t’invite à partager sa famille
+              {i.prenoms.length > 0 && <> ({i.prenoms.join(', ')})</>} : mêmes voyages, et chacun coche ce qu’il met
+              dans la valise.
+            </p>
+            {!vide && (
+              <p className="text-sm text-discret">Tes profils et tes voyages actuels rejoindront cette famille.</p>
+            )}
+            {erreur && <p className="text-sm text-danger">{erreur}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Bouton variante="discret" desactive={occupe} onClick={() => void agir(() => refuser(i.id))}>
+              Refuser
+            </Bouton>
+            <Bouton desactive={occupe} onClick={() => void agir(() => accepter(i.id))}>
+              Rejoindre
+            </Bouton>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

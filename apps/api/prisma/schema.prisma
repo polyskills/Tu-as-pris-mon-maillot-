@@ -75,15 +75,31 @@ model Verification {
 
 // --- Données de l'outil ---
 
-/// Une famille regroupe des profils et des voyages. Plusieurs comptes pourront la partager.
+/// Une famille regroupe des profils et des voyages. Plusieurs comptes peuvent la partager (un compte = une famille).
 model Famille {
-  id      String    @id @default(cuid()) @db.VarChar(32)
-  creeLe  DateTime  @default(now())
-  membres Membre[]
-  profils Profil[]
-  voyages Voyage[]
+  id          String       @id @default(cuid()) @db.VarChar(32)
+  creeLe      DateTime     @default(now())
+  membres     Membre[]
+  profils     Profil[]
+  voyages     Voyage[]
+  invitations Invitation[]
 
   @@map("famille")
+}
+
+/// Invitation à rejoindre une famille, adressée à une adresse e-mail (avec ou sans compte).
+model Invitation {
+  id        String   @id @default(cuid()) @db.VarChar(32)
+  familleId String   @db.VarChar(32)
+  /// En minuscules
+  email     String   @db.VarChar(255)
+  invitePar String   @db.VarChar(255)
+  creeLe    DateTime @default(now())
+  famille   Famille  @relation(fields: [familleId], references: [id], onDelete: Cascade)
+
+  @@unique([familleId, email])
+  @@index([email])
+  @@map("invitation")
 }
 
 model Membre {
@@ -96,6 +112,8 @@ model Membre {
   famille   Famille  @relation(fields: [familleId], references: [id], onDelete: Cascade)
 
   @@id([userId, familleId])
+  /// Un compte = une famille (évite qu'une première connexion en crée plusieurs en parallèle).
+  @@unique([userId])
   @@index([familleId])
   @@map("membre")
 }

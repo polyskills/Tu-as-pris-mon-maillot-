@@ -4,6 +4,7 @@ import { HABITUDES, trancheAge, TRANCHES } from '@maillot/domain';
 import { ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Contenu, EnTete } from '@/components/Coque';
+import { PartageFamille } from '@/components/PartageFamille';
 import { Avatar, couleurProfil } from '@/components/ui';
 import { aujourdhuiIso } from '@/lib/dates';
 import { useStore } from '@/store/store';
@@ -41,6 +42,9 @@ export default function Famille() {
           >
             <Plus size={20} /> Ajouter une personne
           </Link>
+        </div>
+        <div className="mt-8 max-w-2xl">
+          <PartageFamille />
         </div>
       </Contenu>
     </>

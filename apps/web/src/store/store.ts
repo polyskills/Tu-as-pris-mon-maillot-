@@ -24,19 +24,31 @@ export const nouvelId = () => Date.now().toString(36) + Math.random().toString(3
 type EtatServeur = { profils: Profil[]; voyages: Voyage[] };
 export type Role = 'admin' | 'editeur';
 type Catalogue = { version: string; articles: ArticleCatalogue[] };
+/** Invitation reçue à rejoindre la famille d'un autre compte. */
+export type InvitationRecue = { id: string; invitePar: string; prenoms: string[] };
+type Moi = { email: string; familleId: string; role?: Role; invitations: InvitationRecue[] };
 
 interface Etat extends EtatServeur {
   statut: 'chargement' | 'deconnecte' | 'pret';
   email?: string;
+  /** Famille du compte : change quand on rejoint ou quitte une famille partagée. */
+  familleId?: string;
   /** Rôle dans l'équipe du catalogue (absent pour un compte ordinaire). */
   role?: Role;
+  invitations: InvitationRecue[];
   /** Catalogue en service, fourni par le serveur : les listes sont générées avec. */
   catalogue: ArticleCatalogue[];
   erreur?: string;
 
   charger: () => Promise<void>;
+  /** Relit les données du serveur (modifications faites par les autres membres de la famille). */
+  rafraichir: () => Promise<void>;
   effacerErreur: () => void;
   importer: (donnees: EtatServeur) => Promise<void>;
+
+  accepterInvitation: (id: string) => Promise<void>;
+  refuserInvitation: (id: string) => Promise<void>;
+  quitterFamille: () => Promise<void>;
 
   enregistrerProfil: (p: Profil) => void;
   supprimerProfil: (id: string) => void;
@@ -64,15 +76,25 @@ export const useStore = create<Etat>()((set, get) => {
   // File d'attente des écritures : une à la fois, dans l'ordre des clics.
   let file: Promise<unknown> = Promise.resolve();
   let enAttente = 0;
+  /** Augmente à chaque modification locale : une relecture partie avant est alors ignorée. */
+  let generation = 0;
 
   const charger = async () => {
     try {
       const [moi, etat, catalogue] = await Promise.all([
-        api<{ email: string; role?: Role }>('/moi'),
+        api<Moi>('/moi'),
         api<EtatServeur>('/etat'),
         api<Catalogue>('/catalogue'),
       ]);
-      set({ ...etat, email: moi.email, role: moi.role, catalogue: catalogue.articles, statut: 'pret' });
+      set({
+        ...etat,
+        email: moi.email,
+        familleId: moi.familleId,
+        role: moi.role,
+        invitations: moi.invitations,
+        catalogue: catalogue.articles,
+        statut: 'pret',
+      });
     } catch (e) {
       if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte', profils: [], voyages: [] });
       else
@@ -89,6 +111,7 @@ export const useStore = create<Etat>()((set, get) => {
    */
   const envoyer = <T>(appel: () => Promise<T>, appliquer?: (reponse: T) => void, toujours = false) => {
     enAttente++;
+    generation++;
     file = file
       .then(appel)
       .then((reponse) => {
@@ -117,19 +140,54 @@ export const useStore = create<Etat>()((set, get) => {
   const remplacerVoyage = (v: Voyage) => majVoyage(v.id, () => v);
   const remplacerEtat = (etat: EtatServeur) => set(etat);
 
+  /**
+   * Relecture silencieuse. Ignorée si une écriture est en cours ou a eu lieu pendant la relecture : l'écran,
+   * déjà à jour localement, ne doit pas revenir en arrière. Les erreurs (réseau coupé…) sont ignorées.
+   */
+  const rafraichir = async () => {
+    if (get().statut !== 'pret' || enAttente > 0) return;
+    const depart = generation;
+    try {
+      const [moi, etat] = await Promise.all([api<Moi>('/moi'), api<EtatServeur>('/etat')]);
+      if (enAttente > 0 || generation !== depart) return;
+      set({ ...etat, familleId: moi.familleId, role: moi.role, invitations: moi.invitations });
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statut === 401) set({ statut: 'deconnecte' });
+    }
+  };
+
+  /** Changement de famille (invitation acceptée, famille quittée) : la réponse est le nouvel état complet. */
+  const changerDeFamille = async (appel: () => Promise<EtatServeur>) => {
+    await file;
+    generation++;
+    const etat = await appel();
+    set(etat);
+    await rafraichir();
+  };
+
   return {
     profils: [],
     voyages: [],
+    invitations: [],
     statut: 'chargement',
     catalogue: [],
 
     charger,
+    rafraichir,
     effacerErreur: () => set({ erreur: undefined }),
 
     importer: async (donnees) => {
       const etat = await api<EtatServeur>('/import', { methode: 'POST', corps: donnees });
       set(etat);
     },
+
+    accepterInvitation: (id) =>
+      changerDeFamille(() => api<EtatServeur>(`/invitations/${enc(id)}/accepter`, { methode: 'POST' })),
+    refuserInvitation: async (id) => {
+      await api(`/invitations/${enc(id)}/refuser`, { methode: 'POST' });
+      set((s) => ({ invitations: s.invitations.filter((i) => i.id !== id) }));
+    },
+    quitterFamille: () => changerDeFamille(() => api<EtatServeur>('/famille/quitter', { methode: 'POST' })),
 
     // Un profil modifié met à jour les voyages auxquels il participe, sans perdre le pointage.
     enregistrerProfil: (p) => {

@@ -133,12 +133,21 @@ async function verifierParticipants(tx: Tx, familleId: string, participants: str
 
 // --- Famille du compte ---
 
-/** Renvoie la famille du compte, créée à la première connexion. */
+/**
+ * Renvoie la famille du compte, créée à la première connexion. Un compte n'a qu'une famille (contrainte unique) :
+ * si plusieurs requêtes arrivent en même temps, une seule création réussit et les autres relisent la sienne.
+ */
 export async function familleDuCompte(userId: string): Promise<string> {
-  const membre = await prisma.membre.findFirst({ where: { userId }, orderBy: { creeLe: 'asc' } });
+  const membre = await prisma.membre.findUnique({ where: { userId } });
   if (membre) return membre.familleId;
-  const famille = await prisma.famille.create({ data: { membres: { create: { userId } } } });
-  return famille.id;
+  try {
+    const famille = await prisma.$transaction((tx) => tx.famille.create({ data: { membres: { create: { userId } } } }));
+    return famille.id;
+  } catch (e) {
+    const existant = await prisma.membre.findUnique({ where: { userId } });
+    if (existant) return existant.familleId;
+    throw e;
+  }
 }
 
 export async function etat(familleId: string) {
