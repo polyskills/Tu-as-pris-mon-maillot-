@@ -1,0 +1,167 @@
+// Base dédiée à l'outil (MariaDB 10.11 / MySQL 8.4). Migrations dans prisma/migrations.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// --- Comptes (tables imposées par Better Auth) ---
+
+model User {
+  id            String    @id @db.VarChar(64)
+  name          String    @db.Text
+  email         String    @unique @db.VarChar(255)
+  emailVerified Boolean   @default(false)
+  image         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  membres       Membre[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @db.VarChar(64)
+  expiresAt DateTime
+  token     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?  @db.Text
+  userAgent String?  @db.Text
+  userId    String   @db.VarChar(64)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @db.VarChar(64)
+  accountId             String    @db.Text
+  providerId            String    @db.Text
+  userId                String    @db.VarChar(64)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @db.VarChar(64)
+  identifier String   @db.VarChar(255)
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// --- Données de l'outil ---
+
+/// Une famille regroupe des profils et des voyages. Plusieurs comptes pourront la partager.
+model Famille {
+  id      String    @id @default(cuid()) @db.VarChar(32)
+  creeLe  DateTime  @default(now())
+  membres Membre[]
+  profils Profil[]
+  voyages Voyage[]
+
+  @@map("famille")
+}
+
+model Membre {
+  userId    String   @db.VarChar(64)
+  familleId String   @db.VarChar(32)
+  /// proprietaire | membre
+  role      String   @default("proprietaire") @db.VarChar(20)
+  creeLe    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  famille   Famille  @relation(fields: [familleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, familleId])
+  @@index([familleId])
+  @@map("membre")
+}
+
+/// Les listes (habitudes, responsabilités, articles perso) sont stockées en JSON.
+model Profil {
+  id              String   @id @db.VarChar(32)
+  familleId       String   @db.VarChar(32)
+  prenom          String   @db.VarChar(80)
+  couleur         String?  @db.VarChar(9)
+  anneeNaissance  Int
+  sexe            String?  @db.VarChar(1)
+  habitudes       Json
+  responsabilites Json
+  articlesPerso   Json
+  creeLe          DateTime @default(now())
+  majLe           DateTime @updatedAt
+  famille         Famille  @relation(fields: [familleId], references: [id], onDelete: Cascade)
+
+  @@index([familleId])
+  @@map("profil")
+}
+
+model Voyage {
+  id            String          @id @db.VarChar(32)
+  familleId     String          @db.VarChar(32)
+  nom           String          @db.VarChar(120)
+  /// Date ISO AAAA-MM-JJ (gardée en texte pour éviter tout décalage de fuseau horaire)
+  depart        String          @db.Char(10)
+  nuits         Int
+  destinations  Json
+  climat        String          @db.VarChar(10)
+  zone          String          @db.VarChar(12)
+  transports    Json
+  hebergement   String          @db.VarChar(12)
+  machineALaver Boolean
+  activites     Json
+  participants  Json
+  creeLe        DateTime        @default(now())
+  majLe         DateTime        @updatedAt
+  famille       Famille         @relation(fields: [familleId], references: [id], onDelete: Cascade)
+  articles      ArticleVoyage[]
+
+  @@index([familleId])
+  @@map("voyage")
+}
+
+model ArticleVoyage {
+  voyageId     String  @db.VarChar(32)
+  /// Stable : `${proprietaire}:${source}` (régénération sans perte du pointage)
+  id           String  @db.VarChar(120)
+  nom          String  @db.VarChar(200)
+  categorie    String  @db.VarChar(20)
+  proprietaire String  @db.VarChar(32)
+  quantite     Int
+  /// a-prendre | dans-valise | pas-besoin
+  statut       String  @db.VarChar(12)
+  /// valise | courses | voiture
+  liste        String  @db.VarChar(10)
+  /// catalogue | perso | ajout | suggestion
+  origine      String  @db.VarChar(12)
+  ajuste       Boolean @default(false)
+  listeChoisie Boolean @default(false)
+  achetable    Boolean @default(false)
+  voyage       Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
+
+  @@id([voyageId, id])
+  @@map("article_voyage")
+}

@@ -7,13 +7,15 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @maillot/web",
-    "build": "npm run build -w @maillot/web",
+    "build": "npm run build -w @maillot/web && npm run build -w @maillot/api",
     "start": "npm run start -w @maillot/web",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
-    "catalogue": "npm run catalogue -w @maillot/domain"
+    "catalogue": "npm run catalogue -w @maillot/domain",
+    "dev:api": "npm run dev -w @maillot/api",
+    "migrate": "npm run migrate -w @maillot/api"
   },
   "devDependencies": {
     "prettier": "^3.6.2"

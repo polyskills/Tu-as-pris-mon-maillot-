@@ -11,13 +11,23 @@ Prérequis : Node.js 22.13 ou plus récent.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev          # interface : http://localhost:3000
 ```
+
+Pour l'API (facultatif tant que l'interface n'y est pas branchée) : MariaDB 10.11 ou MySQL 8.4, puis
+
+```bash
+cp apps/api/.env.example apps/api/.env   # adapter DATABASE_URL et BETTER_AUTH_SECRET
+npm run migrate
+npm run dev:api      # http://127.0.0.1:4000, /api relayé par l'interface en développement
+```
+
+Déploiement sur le VPS : [deploy/README.md](deploy/README.md).
 
 Autres commandes (depuis la racine) :
 
 ```bash
-npm test             # tests du moteur de règles
+npm test             # tests du moteur et de l'API (l'API demande une base de test, cf. apps/api/.env.test)
 npm run typecheck
 npm run lint
 npm run build        # build de production de l'interface
@@ -33,6 +43,8 @@ Pour l'instant, les données restent dans le navigateur utilisé (en attendant l
 | `apps/web/src/app/` | Écrans (Next.js) : accueil, famille, profil, questionnaire voyage, valise |
 | `apps/web/src/components/` | Mise en page responsive, composants d'interface, questionnaire |
 | `apps/web/src/store/` | État de l'appli (Zustand), stocké dans le navigateur |
+| `apps/api/src/` | API : comptes, routes, accès aux données (`donnees.ts`), validation (`validation.ts`) |
+| `apps/api/prisma/` | Schéma de la base et migrations |
 | `shared/domain/src/types.ts` | Modèle : profils, voyages, articles, conditions |
 | `shared/domain/src/catalogue.ts` | Base d'articles et leurs règles « on prend X si… » |
 | `shared/domain/src/generer.ts` | Moteur : génération, suggestions, quantités, fusion après modification, progression |
