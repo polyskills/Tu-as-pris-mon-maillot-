@@ -3,6 +3,7 @@ import { prisma } from './db';
 import { env } from './env';
 import { Prisma } from './generated/prisma/client';
 import { Conflit, Introuvable } from './erreurs';
+import { EVOLUTIONS } from './evolutions-liste';
 import { schemaArticleCatalogue, schemaEmail, schemaEquipier, schemaSens } from './validation';
 
 // Catalogue en service : en base, gardé en mémoire (un seul processus) et rechargé après chaque modification.
@@ -18,7 +19,7 @@ export interface ArticleAdmin extends ArticleCatalogue {
   majPar?: string;
 }
 
-const versArticle = (l: Ligne): ArticleCatalogue => ({
+export const versArticle = (l: Ligne): ArticleCatalogue => ({
   id: l.id,
   nom: l.nom,
   categorie: l.categorie as ArticleCatalogue['categorie'],
@@ -39,7 +40,7 @@ const versAdmin = (l: Ligne): ArticleAdmin => ({
 /** Valeur JSON facultative : null en base si absente. */
 const jsonOuNull = (v: unknown) => (v === undefined || v === null ? Prisma.DbNull : (v as Prisma.InputJsonValue));
 
-const colonnes = (a: Omit<ArticleCatalogue, 'id'>) => ({
+export const colonnes = (a: Omit<ArticleCatalogue, 'id'>) => ({
   nom: a.nom,
   categorie: a.categorie,
   portee: a.portee,
@@ -51,9 +52,16 @@ const colonnes = (a: Omit<ArticleCatalogue, 'id'>) => ({
 
 let cache: Promise<{ version: string; articles: ArticleCatalogue[] }> | undefined;
 
-/** Importe le catalogue de départ si la table est vide (premier démarrage, base neuve). */
-async function amorcer() {
+/**
+ * Importe le catalogue de départ si la table est vide (premier démarrage, base neuve). Il contient déjà toutes les
+ * mises à jour livrées avec le code : elles sont notées comme appliquées.
+ */
+export async function amorcer() {
   if (await prisma.catalogueArticle.count()) return;
+  await prisma.catalogueEvolution.createMany({
+    data: EVOLUTIONS.map((id) => ({ id })),
+    skipDuplicates: true,
+  });
   await prisma.catalogueArticle.createMany({
     data: CATALOGUE_INITIAL.map((a, i) => ({
       id: a.id,
@@ -122,7 +130,7 @@ export const identifiantDe = (nom: string) =>
     .replace(/-+$/, '') || 'article';
 
 /** État enregistré dans l'historique (sans les dates). */
-const instantane = (l: Ligne) => {
+export const instantane = (l: Ligne) => {
   const { id: _id, ...reste } = versArticle(l);
   void _id;
   return { ...reste, archive: l.archive } as unknown as Prisma.InputJsonValue;

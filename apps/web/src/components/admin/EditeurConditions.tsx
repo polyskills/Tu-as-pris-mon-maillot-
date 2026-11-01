@@ -7,6 +7,7 @@ import {
   DESTINATIONS,
   HABITUDES,
   HEBERGEMENTS,
+  MOTIFS,
   TRANCHES,
   TRANSPORTS,
   ZONES,
@@ -18,11 +19,21 @@ import { ChoixPuces, ChoixUnique, classeSaisie } from '@/components/ui';
 // dans un critère, une seule valeur suffit. Chaque cas peut avoir des exceptions (« sauf »).
 
 type Liste =
-  'destinations' | 'climats' | 'zones' | 'transports' | 'hebergements' | 'activites' | 'ages' | 'sexes' | 'habitudes';
+  | 'motifs'
+  | 'destinations'
+  | 'climats'
+  | 'zones'
+  | 'transports'
+  | 'hebergements'
+  | 'activites'
+  | 'ages'
+  | 'sexes'
+  | 'habitudes';
 type Critere = Liste | 'machineALaver' | 'nuitsMin';
 type Simple = Omit<Condition, 'sauf'>;
 
 const LISTES: Record<Liste, { libelle: string; options: Record<string, string> }> = {
+  motifs: { libelle: 'Motif du voyage', options: MOTIFS },
   destinations: { libelle: 'Destination', options: DESTINATIONS },
   climats: { libelle: 'Climat', options: CLIMATS },
   zones: { libelle: 'Zone', options: ZONES },

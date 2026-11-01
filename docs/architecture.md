@@ -39,6 +39,16 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   archivage, restauration, ordre) régénère tout de suite les **voyages à venir** (départ aujourd'hui ou plus tard), en
   gardant pointage, quantités ajustées et ajouts ; les voyages passés ne bougent pas. Un article archivé disparaît des
   listes régénérées, pointage compris.
+- **Motif du voyage** : « Vacances » (par défaut) ou « Travail ». Un voyage de travail a un seul participant et ne
+  propose que les activités sport et soirées ; les règles du catalogue peuvent dépendre du motif (critère « Motif du
+  voyage »). En travail : ni loisirs, ni plein air, ni vêtements de détente ; ordinateur, stylo + bloc-notes, costume en
+  suggestion.
+- **Bas partagés** : pantalons et shorts / bermudas suivent la règle de quantité « bas » : un total par personne
+  (un pour deux jours, de 2 à 6), réparti entre longs et courts quand la personne a les deux.
+- **Mises à jour du catalogue livrées avec le code** (`apps/api/src/evolutions.ts`) : appliquées une fois au
+  démarrage au catalogue en service (table `catalogue_evolution`), en faisant évoluer les règles existantes sans écraser
+  les retouches de l'équipe ; chaque changement est inscrit dans l'historique et les voyages à venir sont régénérés.
+  Une base neuve reçoit directement le catalogue de départ à jour.
 - **Ordre** : l'ordre du catalogue (réglable par catégorie dans l'administration) est l'ordre des listes de valise.
   Chaque article de voyage garde son rang (`article_voyage.rang`).
 - **Administration** (`/admin`) : rôles **admin** (catalogue + équipe) et **éditeur** (catalogue). Admins d'office :

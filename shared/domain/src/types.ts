@@ -5,7 +5,9 @@ export type Climat = 'chaud' | 'tempere' | 'froid';
 export type Zone = 'france' | 'europe' | 'hors-europe';
 export type Transport = 'voiture' | 'avion' | 'train' | 'bateau';
 export type Hebergement = 'hotel' | 'location' | 'mobil-home' | 'tente' | 'famille';
-export type Activite = 'baignade' | 'randonnee' | 'velo' | 'sport' | 'soiree' | 'plongee' | 'peche' | 'travail';
+export type Activite = 'baignade' | 'randonnee' | 'velo' | 'sport' | 'soiree' | 'plongee' | 'peche';
+/** Motif du voyage : en travail, on part seul et la liste se limite à l'utile (pas de loisirs ni de plein air). */
+export type Motif = 'vacances' | 'travail';
 
 export type TrancheAge = 'bebe' | 'enfant' | 'ado' | 'adulte' | 'senior';
 export type Sexe = 'F' | 'M';
@@ -50,6 +52,8 @@ export type Categorie =
  * À l'intérieur d'un champ, il suffit qu'une valeur corresponde (OU).
  */
 export interface Condition {
+  /** Absent du voyage = vacances. */
+  motifs?: Motif[];
   destinations?: Destination[];
   climats?: Climat[];
   zones?: Zone[];
@@ -75,7 +79,12 @@ export type RegleQuantite =
   | { type: 'parJour'; ratio: number; plus?: number; max?: number; auChaud?: number }
   | { type: 'parClimat'; chaud: number; tempere: number; froid: number }
   /** Pour un article commun : autant que de participants. */
-  | { type: 'parParticipant' };
+  | { type: 'parParticipant' }
+  /**
+   * Bas (pantalons, shorts…) : un total partagé, environ un pour deux jours (2 au moins, 6 au plus). Quand une personne
+   * a des bas longs et courts, le total se répartit entre eux (plutôt courts au chaud, plutôt longs sinon).
+   */
+  | { type: 'bas'; coupe: 'long' | 'court' };
 
 export interface ArticleCatalogue {
   id: string;
@@ -118,6 +127,8 @@ export interface Profil {
 }
 
 export interface ParametresVoyage {
+  /** Absent (voyages créés avant le motif) = vacances. */
+  motif?: Motif;
   nom: string;
   /** Date ISO AAAA-MM-JJ */
   depart: string;

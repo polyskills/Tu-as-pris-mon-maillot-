@@ -2,7 +2,7 @@
 
 > Fichier généré automatiquement depuis `shared/domain/src/catalogue.ts` par `pnpm catalogue`. Catalogue de départ : celui en service se consulte dans l’administration.
 
-**220 articles** : 165 mis d’office, 47 suggestions, 8 points de check-list voiture, dont 19 achetables sur place.
+**222 articles** : 166 mis d’office, 48 suggestions, 8 points de check-list voiture, dont 19 achetables sur place.
 
 ## Comment lire les règles
 
@@ -12,7 +12,7 @@
 - **Quantité « par jour »** : sur la base de nuits + 1 jours, plafonnée à 7 jours avec une machine à laver.
 - **🛒 Achetable sur place** : va dans la liste de courses si le trajet se fait en avion ou en train.
 
-## 📄 Papiers (19)
+## 📄 Papiers (20)
 
 | Article | Pour | Quand | Quantité | Type |
 |---|---|---|---|---|
@@ -26,6 +26,7 @@
 | Permis de conduire | Chaque personne | En voiture + adulte ou senior | 1 | Mis d’office |
 | Carnet de santé | Chaque personne | Bébé ou enfant | 1 | Mis d’office |
 | Ordonnance | Chaque personne | Habitude « Traitement médical » | 1 | Mis d’office |
+| Stylo + bloc-notes | Chaque personne | Voyage de travail | 1 | Mis d’office |
 | Carte de pêche (eau douce) | Chaque personne | Activité pêche + ado ou adulte ou senior | 1 | 💡 Suggestion |
 | Confirmations de réservation (hébergement, location) | Commun | Toujours | 1 | Mis d’office |
 | Attestation assurance voyage / assistance | Commun | Europe ou Hors Europe | 1 | Mis d’office |
@@ -36,7 +37,7 @@
 | Clés de voiture | Commun | En voiture | 1 | Mis d’office |
 | Forfaits de ski (réservation) | Commun | Destination Ski | 1 | Mis d’office |
 
-## 👕 Vêtements (27)
+## 👕 Vêtements (28)
 
 | Article | Pour | Quand | Quantité | Type |
 |---|---|---|---|---|
@@ -45,22 +46,23 @@
 | Paires de chaussettes | Chaque personne | Enfant ou ado ou adulte ou senior | 1 par jour (0,5 au chaud) | Mis d’office |
 | T-shirts / hauts | Chaque personne | Ado ou adulte ou senior | 1 par jour | Mis d’office |
 | T-shirts / hauts | Chaque personne | Enfant | 1,5 par jour | Mis d’office |
-| Pantalons / jeans | Chaque personne | Climat tempéré ou froid + enfant ou ado ou adulte ou senior **OU** destination Ski ou Montagne + enfant ou ado ou adulte ou senior | 0,3 par jour + 1, 5 max | Mis d’office |
-| Shorts / bermudas | Chaque personne | Climat chaud ou tempéré + enfant ou ado ou adulte ou senior, sauf fille / femme | 0,5 par jour, 6 max | Mis d’office |
-| Shorts | Chaque personne | Climat chaud ou tempéré + enfant ou ado ou adulte ou senior + fille / femme | 0,3 par jour, 4 max | Mis d’office |
+| Pantalons / jeans | Chaque personne | Climat tempéré ou froid + enfant ou ado ou adulte ou senior **OU** destination Ski ou Montagne + enfant ou ado ou adulte ou senior **OU** voyage de travail + enfant ou ado ou adulte ou senior | bas longs : 1 pour 2 jours (2 à 6), partagés longs / courts | Mis d’office |
+| Shorts / bermudas | Chaque personne | Climat chaud ou tempéré + enfant ou ado ou adulte ou senior, sauf fille / femme ou voyage de travail | bas courts : 1 pour 2 jours (2 à 6), partagés longs / courts | Mis d’office |
+| Shorts | Chaque personne | Climat chaud ou tempéré + enfant ou ado ou adulte ou senior + fille / femme, sauf voyage de travail | bas courts : 1 pour 2 jours (2 à 6), partagés longs / courts | Mis d’office |
 | Robes / jupes | Chaque personne | Climat chaud ou tempéré + enfant ou ado ou adulte ou senior + fille / femme | 0,3 par jour, 4 max | Mis d’office |
 | Pyjama | Chaque personne | Enfant ou ado ou adulte ou senior | 0,25 par jour, 2 max | Mis d’office |
 | Pull / sweat | Chaque personne | Enfant ou ado ou adulte ou senior | chaud 1 · tempéré 2 · froid 3 | Mis d’office |
-| Veste légère / coupe-vent | Chaque personne | Climat chaud ou tempéré | 1 | Mis d’office |
+| Veste légère / coupe-vent | Chaque personne | Climat chaud ou tempéré, sauf voyage de travail | 1 | Mis d’office |
 | Manteau chaud | Chaque personne | Climat froid **OU** destination Ski | 1 | Mis d’office |
-| Imperméable / K-way | Chaque personne | Climat tempéré **OU** destination Montagne ou Campagne | 1 | Mis d’office |
+| Imperméable / K-way | Chaque personne | Climat tempéré, sauf voyage de travail **OU** destination Montagne ou Campagne, sauf voyage de travail | 1 | Mis d’office |
 | Tenue habillée | Chaque personne | Activité soirées / resto chic + ado ou adulte ou senior | 1 | Mis d’office |
+| Costume / tenue de travail | Chaque personne | Voyage de travail + ado ou adulte ou senior | 1 | 💡 Suggestion |
 | Chaussures de tous les jours | Chaque personne | Enfant ou ado ou adulte ou senior | 1 | Mis d’office |
-| Sandales / tongs | Chaque personne | Climat chaud | 1 | Mis d’office |
+| Sandales / tongs | Chaque personne | Climat chaud, sauf voyage de travail | 1 | Mis d’office |
 | Chaussures de marche | Chaque personne | Activité randonnée **OU** destination Montagne | 1 | Mis d’office |
 | Baskets de sport | Chaque personne | Activité sport ou vélo | 1 | Mis d’office |
 | Chaussons | Chaque personne | Bébé ou enfant **OU** climat froid ou tempéré + hébergement location ou mobil-home ou famille / amis | 1 | Mis d’office |
-| Casquette / chapeau | Chaque personne | Climat chaud **OU** destination Plage ou Montagne | 1 | Mis d’office |
+| Casquette / chapeau | Chaque personne | Climat chaud, sauf voyage de travail **OU** destination Plage ou Montagne, sauf voyage de travail | 1 | Mis d’office |
 | Bonnet | Chaque personne | Climat froid, sauf destination Ski + enfant ou ado ou adulte ou senior **OU** destination Ski + bébé | 1 | Mis d’office |
 | Gants | Chaque personne | Climat froid, sauf destination Ski + enfant ou ado ou adulte ou senior **OU** destination Ski + bébé | 1 | Mis d’office |
 | Écharpe / tour de cou | Chaque personne | Climat froid **OU** destination Ski | 1 | Mis d’office |
@@ -168,7 +170,7 @@
 | Console / tablette + chargeur | Chaque personne | Habitude « Jeux vidéo / tablette » | 1 | Mis d’office |
 | Liseuse / livres | Chaque personne | Habitude « Lecture » | 1 | Mis d’office |
 | Appareil photo + chargeur + carte mémoire | Chaque personne | Habitude « Photo » | 1 | Mis d’office |
-| Ordinateur + chargeur | Chaque personne | Activité travail | 1 | Mis d’office |
+| Ordinateur + chargeur | Chaque personne | Voyage de travail | 1 | Mis d’office |
 | Écouteurs / casque | Chaque personne | Ado ou adulte ou senior, sauf en avion ou train | 1 | 💡 Suggestion |
 | Batterie externe | Commun | En avion ou train **OU** activité randonnée | 1 | Mis d’office |
 | Multiprise | Commun | Hébergement hôtel ou location ou mobil-home ou famille / amis | 1 | Mis d’office |
@@ -176,7 +178,7 @@
 | Lampe frontale / torche | Commun | Hébergement camping (tente) **OU** activité randonnée | 1 | Mis d’office |
 | Batterie externe | Commun | Toujours, sauf en avion ou train ou activité randonnée | 1 | 💡 Suggestion |
 | Adaptateur de prise (Royaume-Uni, Irlande, Malte, Chypre, Suisse) | Commun | Europe | 1 | 💡 Suggestion |
-| Enceinte Bluetooth | Commun | Toujours | 1 | 💡 Suggestion |
+| Enceinte Bluetooth | Commun | Toujours, sauf voyage de travail | 1 | 💡 Suggestion |
 | Lampe frontale / torche | Commun | Toujours, sauf hébergement camping (tente) ou activité randonnée | 1 | 💡 Suggestion |
 
 ## 🧳 Trajet (16)
@@ -190,11 +192,11 @@
 | Sacs (mal des transports) | Chaque personne | Habitude « Mal des transports » | 1 | Mis d’office |
 | Coussin de voyage | Chaque personne | En avion ou train + ado ou adulte ou senior | 1 | 💡 Suggestion |
 | Gourde | Chaque personne | Enfant ou ado ou adulte ou senior, sauf climat chaud ou destination Plage ou activité randonnée | 1 | 💡 Suggestion |
-| Sac à dos de journée | Commun | Toujours, sauf activité randonnée | 1 | Mis d’office |
+| Sac à dos de journée | Commun | Toujours, sauf activité randonnée ou voyage de travail | 1 | Mis d’office |
 | Encas et boissons pour le trajet | Commun | Toujours | 1 | Mis d’office |
 | Sacs (mal des transports) | Commun | En bateau | 1 | Mis d’office |
 | Étiquettes bagages | Commun | En avion | 1 | Mis d’office |
-| Glacière | Commun | Climat chaud + en voiture **OU** hébergement camping (tente) | 1 | Mis d’office |
+| Glacière | Commun | Climat chaud + en voiture, sauf voyage de travail **OU** hébergement camping (tente), sauf voyage de travail | 1 | Mis d’office |
 | Sac à linge sale | Commun | Toujours | 1 | Mis d’office |
 | Cadenas de valise | Commun | En avion | 1 | 💡 Suggestion |
 | Pèse-bagage | Commun | En avion | 1 | 💡 Suggestion |
@@ -270,14 +272,14 @@
 
 | Article | Pour | Quand | Quantité | Type |
 |---|---|---|---|---|
-| Ballon / raquettes de plage | Commun | Destination Plage **OU** enfant ou ado | 1 | 💡 Suggestion |
+| Ballon / raquettes de plage | Commun | Destination Plage, sauf voyage de travail **OU** enfant ou ado, sauf voyage de travail | 1 | 💡 Suggestion |
 | Quelques jouets | Chaque personne | Bébé ou enfant | 1 | Mis d’office |
 | Casque de vélo | Chaque personne | Activité vélo | 1 | Mis d’office |
 | Tenue de sport | Chaque personne | Activité sport ou vélo | 0,3 par jour + 1, 3 max | Mis d’office |
 | Matériel de pêche | Chaque personne | Activité pêche | 1 | Mis d’office |
-| Jeux de société / cartes | Commun | 3 nuits ou plus | 1 | Mis d’office |
+| Jeux de société / cartes | Commun | 3 nuits ou plus, sauf voyage de travail | 1 | Mis d’office |
 | Antivol + kit de réparation vélo | Commun | Activité vélo | 1 | Mis d’office |
-| Jumelles | Commun | Destination Montagne ou Campagne | 1 | 💡 Suggestion |
+| Jumelles | Commun | Destination Montagne ou Campagne, sauf voyage de travail | 1 | 💡 Suggestion |
 
 ## 🚗 Check-list voiture (8)
 

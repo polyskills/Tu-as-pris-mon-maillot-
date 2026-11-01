@@ -140,6 +140,8 @@ model Profil {
 model Voyage {
   id            String          @id @db.VarChar(32)
   familleId     String          @db.VarChar(32)
+  /// vacances | travail
+  motif         String          @default("vacances") @db.VarChar(10)
   nom           String          @db.VarChar(120)
   /// Date ISO AAAA-MM-JJ (gardée en texte pour éviter tout décalage de fuseau horaire)
   depart        String          @db.Char(10)
@@ -231,6 +233,14 @@ model CatalogueHistorique {
   @@index([articleId, date])
   @@index([date])
   @@map("catalogue_historique")
+}
+
+/// Mises à jour du catalogue livrées avec le code, appliquées une fois au catalogue en service (voir evolutions.ts).
+model CatalogueEvolution {
+  id          String   @id @db.VarChar(60)
+  appliqueeLe DateTime @default(now())
+
+  @@map("catalogue_evolution")
 }
 
 /// Personnes qui administrent le catalogue (en plus de ADMIN_EMAILS).

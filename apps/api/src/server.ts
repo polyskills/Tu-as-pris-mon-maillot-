@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { creerApp } from './app';
 import { catalogueEnService } from './catalogue';
 import { prisma } from './db';
+import { regenererVoyagesAVenir } from './donnees';
+import { appliquerEvolutions } from './evolutions';
 import { env } from './env';
 import { journal } from './journal';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -28,7 +30,14 @@ async function interfaceNext() {
   return appli.getRequestHandler();
 }
 
-// Charge le catalogue (et l'importe en base au premier démarrage) avant d'accepter des requêtes.
+// Importe le catalogue au premier démarrage, applique les mises à jour du catalogue livrées avec le code (les voyages à
+// venir sont alors régénérés), puis le charge avant d'accepter des requêtes.
+const evolutions = await appliquerEvolutions();
+if (evolutions) {
+  journal.info(
+    `Catalogue : ${evolutions} mise(s) à jour appliquée(s), ${await regenererVoyagesAVenir()} voyage(s) à venir régénéré(s)`,
+  );
+}
 const { articles } = await catalogueEnService();
 journal.info(`Catalogue : ${articles.length} articles en service`);
 const pages = await interfaceNext();

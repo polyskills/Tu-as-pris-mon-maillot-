@@ -6,6 +6,7 @@ import {
   Condition,
   Habitude,
   Liste,
+  Motif,
   ParametresVoyage,
   Profil,
   RegleQuantite,
@@ -32,8 +33,12 @@ interface Personnes {
 const intersecte = <T>(attendu: T[] | undefined, present: T[]) =>
   attendu === undefined || attendu.some((v) => present.includes(v));
 
+/** Motif du voyage ; absent (voyages d'avant le motif) = vacances. */
+export const motifDe = (v: Pick<ParametresVoyage, 'motif'>): Motif => v.motif ?? 'vacances';
+
 function satisfait(c: Condition, v: ParametresVoyage, p: Personnes): boolean {
   return (
+    intersecte(c.motifs, [motifDe(v)]) &&
     intersecte(c.destinations, v.destinations) &&
     intersecte(c.climats, [v.climat]) &&
     intersecte(c.zones, [v.zone]) &&
@@ -80,7 +85,28 @@ export function calculerQuantite(
       const brut = Math.ceil(ratio * joursComptes(v.nuits, v.machineALaver) + (regle.plus ?? 0));
       return Math.max(1, regle.max ? Math.min(brut, regle.max) : brut);
     }
+    case 'bas':
+      return totalBas(v);
   }
+}
+
+/** Nombre total de bas (pantalons, shorts…) d'une personne : un pour deux jours, entre 2 et 6. */
+export function totalBas(v: Pick<ParametresVoyage, 'nuits' | 'machineALaver'>): number {
+  return Math.min(6, Math.max(2, Math.ceil(joursComptes(v.nuits, v.machineALaver) / 2)));
+}
+
+/**
+ * Répartit le total des bas d'une même personne entre ses bas longs et courts (il en reste au moins un de chaque) :
+ * plutôt des courts au chaud, plutôt des longs sinon.
+ */
+function repartirBas(articles: { article: ArticleVoyage; coupe: 'long' | 'court' }[], v: ParametresVoyage) {
+  const longs = articles.filter((x) => x.coupe === 'long');
+  const courts = articles.filter((x) => x.coupe === 'court');
+  if (!longs.length || !courts.length) return;
+  const total = totalBas(v);
+  const nbCourts = v.climat === 'chaud' ? Math.ceil(total / 2) : Math.floor(total / 2);
+  for (const x of courts) x.article.quantite = Math.max(1, nbCourts);
+  for (const x of longs) x.article.quantite = Math.max(1, total - nbCourts);
 }
 
 /** En avion ou en train, ce qui s'achète facilement sur place va dans la liste de courses. */
@@ -108,6 +134,9 @@ function appliquer(
     habitudes: participants.flatMap((p) => p.habitudes),
   };
 
+  /** Bas de chaque personne, répartis à la fin entre longs et courts. */
+  const bas = new Map<string, { article: ArticleVoyage; coupe: 'long' | 'court' }[]>();
+
   for (const article of catalogue) {
     const base = {
       nom: article.nom,
@@ -133,11 +162,32 @@ function appliquer(
         habitudes: p.habitudes,
       };
       if (estRequis(article, v, personne)) {
-        resultat.push({ ...base, id: `${p.id}:${article.id}`, proprietaire: p.id });
+        const cree: ArticleVoyage = { ...base, id: `${p.id}:${article.id}`, proprietaire: p.id };
+        resultat.push(cree);
+        if (article.quantite?.type === 'bas') {
+          bas.set(p.id, [...(bas.get(p.id) ?? []), { article: cree, coupe: article.quantite.coupe }]);
+        }
       }
     }
   }
+  for (const articles of bas.values()) repartirBas(articles, v);
   return resultat;
+}
+
+/**
+ * Ajoute à une règle « sauf pour ce motif » (pour chacun de ses cas). Sert au catalogue de départ et à la mise à jour
+ * du catalogue en service.
+ */
+export function exclureMotif(si: Condition | Condition[] | undefined, motif: Motif): Condition | Condition[] {
+  const exclusion: Condition = { motifs: [motif] };
+  const exclure = (c: Condition): Condition => {
+    const sauf = c.sauf === undefined ? [] : Array.isArray(c.sauf) ? c.sauf : [c.sauf];
+    if (sauf.some((x) => Object.keys(x).length === 1 && x.motifs?.length === 1 && x.motifs[0] === motif)) return c;
+    const tous = [...sauf, exclusion];
+    return { ...c, sauf: tous.length === 1 ? tous[0] : tous };
+  };
+  if (si === undefined) return exclure({});
+  return Array.isArray(si) ? si.map(exclure) : exclure(si);
 }
 
 /** Génère la liste d'un voyage (valise, courses, check-list voiture) à partir du catalogue et des profils. */

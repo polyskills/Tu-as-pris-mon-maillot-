@@ -5,8 +5,10 @@ import {
   COMMUN,
   genererArticles,
   genererSuggestions,
+  motifDe,
   ParametresVoyage,
   Profil,
+  trancheAge,
 } from '@maillot/domain';
 import { useState } from 'react';
 import { ChoixUnique } from '@/components/ui';
@@ -134,6 +136,18 @@ const SCENARIOS: Scenario[] = [
   },
   {
     ...base,
+    motif: 'travail',
+    nom: '💼 Déplacement pro · train · hôtel · 3 nuits · seul',
+    depart: '2027-03-10',
+    nuits: 3,
+    destinations: ['ville'],
+    climat: 'tempere',
+    zone: 'france',
+    transports: ['train'],
+    hebergement: 'hotel',
+  },
+  {
+    ...base,
     nom: '👵 Chez la famille · train · 4 nuits',
     depart: '2027-12-23',
     nuits: 4,
@@ -165,7 +179,10 @@ export function Simulateur({ article }: { article: Brouillon }) {
       </p>
       <ul className="flex flex-col divide-y divide-bordure">
         {SCENARIOS.map((s) => {
-          const v: ParametresVoyage = { ...s, participants: profils.map((p) => p.id) };
+          // Voyage de travail : seul, le premier adulte de la famille.
+          const adulte = profils.find((p) => ['adulte', 'senior'].includes(trancheAge(p.anneeNaissance, s.depart)));
+          const participants = motifDe(s) === 'travail' ? [(adulte ?? profils[0]).id] : profils.map((p) => p.id);
+          const v: ParametresVoyage = { ...s, participants };
           const lignes = (
             article.mode === 'suggestion'
               ? genererSuggestions(v, profils, catalogue, [])

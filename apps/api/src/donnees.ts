@@ -13,7 +13,14 @@ import { articlesEnService } from './catalogue';
 import { prisma } from './db';
 import { Conflit, Introuvable } from './erreurs';
 import type { Prisma } from './generated/prisma/client';
-import { schemaAjoutArticle, schemaImport, schemaMajArticle, schemaNouveauVoyage, schemaProfil } from './validation';
+import {
+  schemaAjoutArticle,
+  schemaImport,
+  schemaMajArticle,
+  schemaNouveauVoyage,
+  schemaProfil,
+  verifierMotif,
+} from './validation';
 
 // Accès aux données d'une famille. Toutes les fonctions reçoivent l'identifiant de la famille du compte connecté :
 // impossible de lire ou modifier les données d'une autre famille.
@@ -60,6 +67,7 @@ const versArticle = (l: LigneArticle): ArticleVoyage => ({
 const versVoyage = (l: LigneVoyage): Voyage => ({
   id: l.id,
   creeLe: l.creeLe.toISOString(),
+  motif: l.motif as Voyage['motif'],
   nom: l.nom,
   depart: l.depart,
   nuits: l.nuits,
@@ -75,6 +83,7 @@ const versVoyage = (l: LigneVoyage): Voyage => ({
 });
 
 const colonnesParametres = (p: ParametresVoyage) => ({
+  motif: p.motif ?? 'vacances',
   nom: p.nom,
   depart: p.depart,
   nuits: p.nuits,
@@ -227,6 +236,7 @@ async function etatTx(tx: Tx, familleId: string) {
 
 export async function creerVoyage(familleId: string, donnees: unknown) {
   const { id, ...params } = schemaNouveauVoyage.parse(donnees) as ParametresVoyage & { id: string };
+  verifierMotif(params);
   return prisma.$transaction(async (tx) => {
     if (await tx.voyage.findUnique({ where: { id } })) throw new Conflit('Identifiant déjà utilisé');
     await verifierParticipants(tx, familleId, params.participants);
@@ -240,6 +250,7 @@ export async function creerVoyage(familleId: string, donnees: unknown) {
 /** Modifie les paramètres et régénère la liste en gardant pointage, quantités ajustées et ajouts. */
 export async function modifierVoyage(familleId: string, voyageId: string, donnees: unknown) {
   const params = schemaNouveauVoyage.omit({ id: true }).parse(donnees) as ParametresVoyage;
+  verifierMotif(params);
   return prisma.$transaction(async (tx) => {
     const ancien = await voyageDe(tx, familleId, voyageId);
     await verifierParticipants(tx, familleId, params.participants);

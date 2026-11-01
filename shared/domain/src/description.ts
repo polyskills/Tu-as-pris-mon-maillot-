@@ -6,6 +6,7 @@ import {
   DESTINATIONS,
   HABITUDES,
   HEBERGEMENTS,
+  MOTIFS,
   SEXES,
   TRANCHES,
   TRANSPORTS,
@@ -21,6 +22,7 @@ const ou = <K extends string>(cles: K[], libelles: Record<K, string>) =>
 /** « destination Plage + climat chaud, sauf hébergement hôtel » */
 export function decrireCondition(c: Condition): string {
   const morceaux: string[] = [];
+  if (c.motifs) morceaux.push(`voyage de ${ou(c.motifs, MOTIFS).toLowerCase()}`);
   if (c.destinations) morceaux.push(`destination ${ou(c.destinations, DESTINATIONS)}`);
   if (c.climats) morceaux.push(`climat ${ou(c.climats, CLIMATS).toLowerCase()}`);
   if (c.zones) morceaux.push(ou(c.zones, ZONES));
@@ -62,6 +64,8 @@ export function decrireQuantite(q?: RegleQuantite): string {
       return `chaud ${q.chaud} · tempéré ${q.tempere} · froid ${q.froid}`;
     case 'parParticipant':
       return '1 par participant';
+    case 'bas':
+      return `bas ${q.coupe === 'long' ? 'longs' : 'courts'} : 1 pour 2 jours (2 à 6), partagés longs / courts`;
     case 'parJour': {
       let t = `${nb(q.ratio)} par jour`;
       if (q.auChaud !== undefined) t += ` (${nb(q.auChaud)} au chaud)`;

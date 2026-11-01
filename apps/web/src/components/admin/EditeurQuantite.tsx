@@ -9,6 +9,7 @@ const TYPES = {
   parJour: 'Selon la durée',
   parClimat: 'Selon le climat',
   parParticipant: '1 par participant',
+  bas: 'Bas (pantalons, shorts)',
 } as const;
 type TypeQuantite = keyof typeof TYPES;
 
@@ -17,7 +18,10 @@ const PAR_DEFAUT: Record<Exclude<TypeQuantite, 'un'>, RegleQuantite> = {
   parJour: { type: 'parJour', ratio: 1, max: 10 },
   parClimat: { type: 'parClimat', chaud: 1, tempere: 1, froid: 2 },
   parParticipant: { type: 'parParticipant' },
+  bas: { type: 'bas', coupe: 'long' },
 };
+
+const COUPES = { long: 'Long (pantalon)', court: 'Court (short, bermuda)' } as const;
 
 /** Champ numérique : vide = valeur absente (pour les réglages facultatifs). */
 function Nombre({
@@ -133,6 +137,15 @@ export function EditeurQuantite({
             onChange={(froid) => onChange({ ...valeur, froid: froid ?? 0 })}
           />
         </div>
+      )}
+      {valeur?.type === 'bas' && (
+        <>
+          <ChoixUnique options={COUPES} valeur={valeur.coupe} onChange={(coupe) => onChange({ ...valeur, coupe })} />
+          <p className="text-sm text-discret">
+            Total partagé par personne : un bas pour deux jours (2 à 6). Quand une personne a des bas longs et courts,
+            le total se répartit entre eux : plutôt des courts au chaud, plutôt des longs sinon.
+          </p>
+        </>
       )}
       {valeur?.type === 'parParticipant' && (
         <p className="text-sm text-discret">Pour un article commun : autant que de voyageurs.</p>

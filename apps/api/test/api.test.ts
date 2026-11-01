@@ -69,6 +69,25 @@ describe('famille, voyage et pointage', () => {
     expect(articles.find((a) => a.id === 'lea01:doudou')).toBeDefined();
   });
 
+  it('crée un voyage de travail, seul, avec la liste adaptée', async () => {
+    const travail = {
+      ...voyagePlage('voytrav', ['papa1']),
+      motif: 'travail',
+      destinations: ['ville'],
+      climat: 'tempere',
+    };
+    const res = await julie.post('/api/voyages').send(travail).expect(200);
+    expect(res.body.motif).toBe('travail');
+    const ids = (res.body.articles as Article[]).map((a) => a.id);
+    expect(ids).toContain('papa1:ordinateur');
+    expect(ids).not.toContain('papa1:shorts');
+    await julie
+      .post('/api/voyages')
+      .send({ ...travail, id: 'voytra2', participants: ['papa1', 'lea01'] })
+      .expect(400);
+    await julie.delete('/api/voyages/voytrav').expect(204);
+  });
+
   it('refuse un participant qui n’est pas de la famille', async () => {
     await julie
       .post('/api/voyages')

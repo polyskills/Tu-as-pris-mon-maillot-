@@ -1,6 +1,6 @@
 'use client';
 
-import { progression, Voyage } from '@maillot/domain';
+import { motifDe, progression, Voyage } from '@maillot/domain';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Contenu } from '@/components/Coque';
@@ -47,6 +47,7 @@ export default function Accueil() {
           </span>
         </div>
         <p className="text-sm text-discret">
+          {motifDe(v) === 'travail' && '💼 Travail · '}
           {dateCourte(v.depart)} · {v.nuits} nuit{v.nuits > 1 ? 's' : ''}
         </p>
         <div className="flex gap-1">

@@ -1,3 +1,4 @@
+import { exclureMotif } from './generer';
 import { ArticleCatalogue, Categorie, Condition, RegleQuantite, TrancheAge } from './types';
 
 // Base d'articles fournie par défaut. Les règles se lisent : « on prend X si … ».
@@ -41,7 +42,14 @@ const parJour = (ratio: number, plus = 0, max?: number, auChaud?: number): Regle
   auChaud,
 });
 const fixe = (n: number): RegleQuantite => ({ type: 'fixe', n });
+/** Bas : total partagé entre longs et courts (voir RegleQuantite). */
+const BAS_LONG: RegleQuantite = { type: 'bas', coupe: 'long' };
+const BAS_COURT: RegleQuantite = { type: 'bas', coupe: 'court' };
 const PAR_PARTICIPANT: RegleQuantite = { type: 'parParticipant' };
+
+/** Voyage de travail : on retire les loisirs, le plein air et les vêtements de détente. */
+const TRAVAIL: Condition = { motifs: ['travail'] };
+const sansTravail = (si: Condition | Condition[]) => exclureMotif(si, 'travail');
 
 const GRANDS: TrancheAge[] = ['enfant', 'ado', 'adulte', 'senior'];
 const PETITS: TrancheAge[] = ['bebe', 'enfant'];
@@ -83,6 +91,7 @@ export const CATALOGUE: ArticleCatalogue[] = [
   perso('permis', 'Permis de conduire', 'papiers', { transports: ['voiture'], ...ADULTES }),
   perso('carnet-sante', 'Carnet de santé', 'papiers', { ages: PETITS }),
   perso('ordonnance', 'Ordonnance', 'papiers', { habitudes: ['traitement'] }),
+  perso('stylo-bloc', 'Stylo + bloc-notes', 'papiers', { motifs: ['travail'] }),
   suggestion(perso('carte-peche', 'Carte de pêche (eau douce)', 'papiers', { activites: ['peche'], ...PLUS_DE_12 })),
   commun('reservations', 'Confirmations de réservation (hébergement, location)', 'papiers'),
   commun('assurance-voyage', 'Attestation assurance voyage / assistance', 'papiers', HORS_FRANCE),
@@ -109,23 +118,25 @@ export const CATALOGUE: ArticleCatalogue[] = [
     [
       { ...NON_BEBE, climats: ['tempere', 'froid'] },
       { ...NON_BEBE, destinations: ['ski', 'montagne'] },
+      // En travail, pas de shorts : les pantalons, même au chaud.
+      { ...NON_BEBE, motifs: ['travail'] },
     ],
-    parJour(0.3, 1, 5),
+    BAS_LONG,
   ),
   // Filles et femmes : moins de shorts, et des robes / jupes. Sexe non précisé : shorts seulement.
   perso(
     'shorts',
     'Shorts / bermudas',
     'vetements',
-    { ...NON_BEBE, climats: ['chaud', 'tempere'], sauf: { sexes: ['F'] } },
-    parJour(0.5, 0, 6),
+    { ...NON_BEBE, climats: ['chaud', 'tempere'], sauf: [{ sexes: ['F'] }, TRAVAIL] },
+    BAS_COURT,
   ),
   perso(
     'shorts-f',
     'Shorts',
     'vetements',
-    { ...NON_BEBE, climats: ['chaud', 'tempere'], sexes: ['F'] },
-    parJour(0.3, 0, 4),
+    { ...NON_BEBE, climats: ['chaud', 'tempere'], sexes: ['F'], sauf: TRAVAIL },
+    BAS_COURT,
   ),
   perso(
     'robes',
@@ -136,15 +147,18 @@ export const CATALOGUE: ArticleCatalogue[] = [
   ),
   perso('pyjama', 'Pyjama', 'vetements', NON_BEBE, parJour(0.25, 0, 2)),
   perso('pull', 'Pull / sweat', 'vetements', NON_BEBE, { type: 'parClimat', chaud: 1, tempere: 2, froid: 3 }),
-  perso('veste-legere', 'Veste légère / coupe-vent', 'vetements', { climats: ['chaud', 'tempere'] }),
+  perso('veste-legere', 'Veste légère / coupe-vent', 'vetements', { climats: ['chaud', 'tempere'], sauf: TRAVAIL }),
   perso('manteau', 'Manteau chaud', 'vetements', FROID),
-  perso('impermeable', 'Imperméable / K-way', 'vetements', [
-    { climats: ['tempere'] },
-    { destinations: ['montagne', 'campagne'] },
-  ]),
+  perso(
+    'impermeable',
+    'Imperméable / K-way',
+    'vetements',
+    sansTravail([{ climats: ['tempere'] }, { destinations: ['montagne', 'campagne'] }]),
+  ),
   perso('tenue-soiree', 'Tenue habillée', 'vetements', { ...PLUS_DE_12, activites: ['soiree'] }),
+  suggestion(perso('costume', 'Costume / tenue de travail', 'vetements', { ...PLUS_DE_12, motifs: ['travail'] })),
   perso('chaussures-ville', 'Chaussures de tous les jours', 'vetements', NON_BEBE),
-  perso('sandales', 'Sandales / tongs', 'vetements', { climats: ['chaud'] }),
+  perso('sandales', 'Sandales / tongs', 'vetements', { climats: ['chaud'], sauf: TRAVAIL }),
   perso('chaussures-marche', 'Chaussures de marche', 'vetements', [
     { activites: ['randonnee'] },
     { destinations: ['montagne'] },
@@ -154,10 +168,12 @@ export const CATALOGUE: ArticleCatalogue[] = [
     { ages: PETITS },
     { hebergements: ['location', 'mobil-home', 'famille'], climats: ['froid', 'tempere'] },
   ]),
-  perso('casquette', 'Casquette / chapeau', 'vetements', [
-    { climats: ['chaud'] },
-    { destinations: ['plage', 'montagne'] },
-  ]),
+  perso(
+    'casquette',
+    'Casquette / chapeau',
+    'vetements',
+    sansTravail([{ climats: ['chaud'] }, { destinations: ['plage', 'montagne'] }]),
+  ),
   // Au ski, les skieurs ont leurs gants de ski et leur casque.
   perso('bonnet', 'Bonnet', 'vetements', HORS_SKI_OU_BEBE),
   perso('gants', 'Gants', 'vetements', HORS_SKI_OU_BEBE),
@@ -293,7 +309,7 @@ export const CATALOGUE: ArticleCatalogue[] = [
   perso('console', 'Console / tablette + chargeur', 'electronique', { habitudes: ['jeux-video'] }),
   perso('liseuse', 'Liseuse / livres', 'electronique', { habitudes: ['lecture'] }),
   perso('appareil-photo', 'Appareil photo + chargeur + carte mémoire', 'electronique', { habitudes: ['photo'] }),
-  perso('ordinateur', 'Ordinateur + chargeur', 'electronique', { activites: ['travail'] }),
+  perso('ordinateur', 'Ordinateur + chargeur', 'electronique', { motifs: ['travail'] }),
   suggestion(perso('ecouteurs-s', 'Écouteurs / casque', 'electronique', { ...PLUS_DE_12, sauf: AVION_TRAIN })),
   commun('batterie-externe', 'Batterie externe', 'electronique', [AVION_TRAIN, { activites: ['randonnee'] }]),
   commun('multiprise', 'Multiprise', 'electronique', { hebergements: ['hotel', 'location', 'mobil-home', 'famille'] }),
@@ -307,7 +323,7 @@ export const CATALOGUE: ArticleCatalogue[] = [
   suggestion(
     commun('adaptateur-s', 'Adaptateur de prise (Royaume-Uni, Irlande, Malte, Chypre, Suisse)', 'electronique', EUROPE),
   ),
-  suggestion(commun('enceinte', 'Enceinte Bluetooth', 'electronique')),
+  suggestion(commun('enceinte', 'Enceinte Bluetooth', 'electronique', { sauf: TRAVAIL })),
   suggestion(
     commun('lampe-frontale-s', 'Lampe frontale / torche', 'electronique', {
       sauf: [TENTE, { activites: ['randonnee'] }],
@@ -331,11 +347,11 @@ export const CATALOGUE: ArticleCatalogue[] = [
       sauf: [{ climats: ['chaud'] }, { destinations: ['plage'] }, { activites: ['randonnee'] }],
     }),
   ),
-  commun('sac-a-dos', 'Sac à dos de journée', 'voyage', { sauf: { activites: ['randonnee'] } }),
+  commun('sac-a-dos', 'Sac à dos de journée', 'voyage', { sauf: [{ activites: ['randonnee'] }, TRAVAIL] }),
   commun('encas-trajet', 'Encas et boissons pour le trajet', 'voyage'),
   commun('sacs-vomi-bateau', 'Sacs (mal des transports)', 'voyage', { transports: ['bateau'] }),
   commun('etiquettes-bagages', 'Étiquettes bagages', 'voyage', { transports: ['avion'] }),
-  commun('glaciere', 'Glacière', 'voyage', [{ transports: ['voiture'], climats: ['chaud'] }, TENTE]),
+  commun('glaciere', 'Glacière', 'voyage', sansTravail([{ transports: ['voiture'], climats: ['chaud'] }, TENTE])),
   commun('sac-linge-sale', 'Sac à linge sale', 'voyage'),
   suggestion(commun('cadenas', 'Cadenas de valise', 'voyage', { transports: ['avion'] })),
   suggestion(commun('pese-bagage', 'Pèse-bagage', 'voyage', { transports: ['avion'] })),
@@ -403,10 +419,12 @@ export const CATALOGUE: ArticleCatalogue[] = [
   commun('sac-plage', 'Sac de plage', 'plage', { destinations: ['plage'] }),
   suggestion(commun('pochette-etanche', 'Pochette étanche pour téléphone', 'plage', NAGE)),
   suggestion(
-    commun('ballon', 'Ballon / raquettes de plage', 'loisirs', [
-      { destinations: ['plage'] },
-      { ages: ['enfant', 'ado'] },
-    ]),
+    commun(
+      'ballon',
+      'Ballon / raquettes de plage',
+      'loisirs',
+      sansTravail([{ destinations: ['plage'] }, { ages: ['enfant', 'ado'] }]),
+    ),
   ),
   suggestion(commun('bouee', 'Bouée', 'plage', NAGE)),
   suggestion(commun('natte', 'Natte de plage', 'plage', { destinations: ['plage'] })),
@@ -432,9 +450,9 @@ export const CATALOGUE: ArticleCatalogue[] = [
   perso('casque-velo', 'Casque de vélo', 'loisirs', { activites: ['velo'] }),
   perso('tenue-sport', 'Tenue de sport', 'loisirs', { activites: ['sport', 'velo'] }, parJour(0.3, 1, 3)),
   perso('canne-peche', 'Matériel de pêche', 'loisirs', { activites: ['peche'] }),
-  commun('jeux-societe', 'Jeux de société / cartes', 'loisirs', { nuitsMin: 3 }),
+  commun('jeux-societe', 'Jeux de société / cartes', 'loisirs', { nuitsMin: 3, sauf: TRAVAIL }),
   commun('antivol', 'Antivol + kit de réparation vélo', 'loisirs', { activites: ['velo'] }),
-  suggestion(commun('jumelles', 'Jumelles', 'loisirs', { destinations: ['montagne', 'campagne'] })),
+  suggestion(commun('jumelles', 'Jumelles', 'loisirs', sansTravail({ destinations: ['montagne', 'campagne'] }))),
 
   // --- Check-list voiture (trajet en voiture uniquement) ---
   voiture('gilets', 'Gilets jaunes + triangle'),

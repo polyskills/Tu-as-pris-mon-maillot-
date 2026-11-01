@@ -12,6 +12,7 @@ export async function viderBase() {
   for (const table of [
     'catalogue_historique',
     'catalogue_article',
+    'catalogue_evolution',
     'equipier',
     'invitation',
     'article_voyage',

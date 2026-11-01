@@ -1,10 +1,12 @@
 import {
+  Activite,
   ACTIVITES,
   CATEGORIES,
   CLIMATS,
   DESTINATIONS,
   HABITUDES,
   HEBERGEMENTS,
+  MOTIFS,
   SEXES,
   TRANCHES,
   TRANSPORTS,
@@ -54,6 +56,7 @@ export const schemaProfil = z.object({
 });
 
 export const schemaParametresVoyage = z.object({
+  motif: enumDe(MOTIFS).default('vacances'),
   nom: z.string().trim().min(1).max(120),
   depart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date attendue au format AAAA-MM-JJ'),
   nuits: z.number().int().min(0).max(365),
@@ -68,6 +71,20 @@ export const schemaParametresVoyage = z.object({
 });
 
 export const schemaNouveauVoyage = schemaParametresVoyage.extend({ id: identifiant });
+
+/** Un voyage de travail se fait seul : un seul participant. */
+export function verifierMotif(v: { motif?: string; participants: string[] }) {
+  if (v.motif === 'travail' && v.participants.length !== 1) {
+    throw new z.ZodError([
+      {
+        code: 'custom',
+        path: ['participants'],
+        message: 'Un voyage de travail a un seul participant',
+        input: v.participants,
+      },
+    ]);
+  }
+}
 
 export const schemaMajArticle = z
   .object({
@@ -105,6 +122,8 @@ export const schemaImport = z.object({
     .array(
       schemaNouveauVoyage.extend({
         participants: z.array(identifiant).max(30),
+        // « Travail » était une activité avant de devenir un motif : ignorée à l'import.
+        activites: z.array(z.string()).transform((a) => a.filter((x): x is Activite => x in ACTIVITES)),
         articles: z.array(schemaArticleImporte).max(2000),
       }),
     )
@@ -117,6 +136,7 @@ const valeurs = <K extends string>(r: Record<K, string>) => z.array(enumDe(r)).m
 
 /** Condition sans exclusion : les « sauf » ne s'imbriquent pas. */
 const conditionSimple = z.strictObject({
+  motifs: valeurs(MOTIFS),
   destinations: valeurs(DESTINATIONS),
   climats: valeurs(CLIMATS),
   zones: valeurs(ZONES),
@@ -154,6 +174,7 @@ const quantiteCatalogue = z.discriminatedUnion('type', [
     froid: z.number().int().min(1).max(99),
   }),
   z.strictObject({ type: z.literal('parParticipant') }),
+  z.strictObject({ type: z.literal('bas'), coupe: z.enum(['long', 'court']) }),
 ]);
 
 /** Article du catalogue tel que saisi dans l'administration (l'identifiant est donné par le serveur). */

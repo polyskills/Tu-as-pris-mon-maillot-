@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from './catalogue';
 import {
   calculerQuantite,
+  exclureMotif,
   fusionner,
   genererArticles,
   genererSuggestions,
@@ -394,5 +395,104 @@ describe('baignade sans plage', () => {
     const sec = { ...ville, activites: [] };
     expect(nomsDe(sec)).not.toContain('Maillot de bain');
     expect(nomsDe(sec)).not.toContain('Serviette de baignade');
+  });
+});
+
+describe('motif du voyage', () => {
+  // Déplacement de 3 nuits à Valence, seul, à l'hôtel, en train.
+  const valence: ParametresVoyage = {
+    motif: 'travail',
+    nom: 'Valence',
+    depart: '2027-03-10',
+    nuits: 3,
+    destinations: ['ville'],
+    climat: 'tempere',
+    zone: 'europe',
+    transports: ['train'],
+    hebergement: 'hotel',
+    machineALaver: false,
+    activites: [],
+    participants: ['papa'],
+  };
+  const liste = genererArticles(valence, famille, CATALOGUE);
+  const ids = liste.map((a) => a.id);
+
+  it('retire les loisirs et le plein air en voyage de travail', () => {
+    for (const absent of [
+      'papa:shorts',
+      'papa:veste-legere',
+      'papa:impermeable',
+      'commun:sac-a-dos',
+      'commun:jeux-societe',
+    ]) {
+      expect(ids).not.toContain(absent);
+    }
+  });
+
+  it('ajoute ce qui sert au travail, et garde le pyjama', () => {
+    expect(ids).toEqual(expect.arrayContaining(['papa:ordinateur', 'papa:stylo-bloc', 'papa:pyjama']));
+    const suggestions = genererSuggestions(valence, famille, CATALOGUE, liste).map((a) => a.id);
+    expect(suggestions).toContain('papa:costume');
+    expect(suggestions).not.toContain('commun:enceinte');
+  });
+
+  it('garde des pantalons en travail, même au chaud', () => {
+    expect(trouve(liste, 'papa:pantalons')?.quantite).toBe(2);
+    const auChaud = genererArticles({ ...valence, climat: 'chaud' }, famille, CATALOGUE);
+    expect(trouve(auChaud, 'papa:pantalons')?.quantite).toBe(2);
+    expect(trouve(auChaud, 'papa:sandales')).toBeUndefined();
+  });
+
+  it('ne change rien aux vacances (motif absent = vacances)', () => {
+    const vacances = genererArticles({ ...valence, motif: undefined }, famille, CATALOGUE).map((a) => a.id);
+    expect(vacances).toEqual(expect.arrayContaining(['papa:shorts', 'papa:impermeable', 'commun:sac-a-dos']));
+    expect(vacances).not.toContain('papa:ordinateur');
+  });
+
+  it('ajoute l’exclusion une seule fois, en gardant les exclusions existantes', () => {
+    const une = exclureMotif({ climats: ['chaud'], sauf: { sexes: ['F'] } }, 'travail');
+    expect(une).toEqual({ climats: ['chaud'], sauf: [{ sexes: ['F'] }, { motifs: ['travail'] }] });
+    expect(exclureMotif(une, 'travail')).toEqual(une);
+    expect(exclureMotif(undefined, 'travail')).toEqual({ sauf: { motifs: ['travail'] } });
+    expect(exclureMotif([{ climats: ['chaud'] }, { destinations: ['plage'] }], 'travail')).toEqual([
+      { climats: ['chaud'], sauf: { motifs: ['travail'] } },
+      { destinations: ['plage'], sauf: { motifs: ['travail'] } },
+    ]);
+  });
+});
+
+describe('bas (pantalons, shorts) : un total partagé', () => {
+  const quantites = (v: ParametresVoyage, qui: string) => {
+    const l = genererArticles(v, famille, CATALOGUE);
+    return {
+      longs: trouve(l, `${qui}:pantalons`)?.quantite ?? 0,
+      courts: (trouve(l, `${qui}:shorts`) ?? trouve(l, `${qui}:shorts-f`))?.quantite ?? 0,
+    };
+  };
+  const tempere3: ParametresVoyage = { ...plage, destinations: ['ville'], climat: 'tempere', nuits: 3, activites: [] };
+
+  it('3 nuits en climat tempéré : 1 pantalon et 1 bermuda (au lieu de 3 + 2)', () => {
+    expect(quantites(tempere3, 'papa')).toEqual({ longs: 1, courts: 1 });
+    expect(quantites(tempere3, 'maman')).toEqual({ longs: 1, courts: 1 });
+  });
+
+  it('une semaine : 4 bas, plutôt courts au chaud, plutôt longs au tempéré', () => {
+    expect(quantites({ ...tempere3, nuits: 7 }, 'papa')).toEqual({ longs: 2, courts: 2 });
+    expect(quantites({ ...plage, destinations: ['montagne'], activites: [] }, 'papa')).toEqual({ longs: 2, courts: 2 });
+    expect(quantites({ ...tempere3, nuits: 8 }, 'papa')).toEqual({ longs: 3, courts: 2 });
+    expect(quantites({ ...plage, destinations: ['montagne'], nuits: 8, activites: [] }, 'papa')).toEqual({
+      longs: 2,
+      courts: 3,
+    });
+  });
+
+  it('un seul type de bas : il prend tout le total (au moins 2, au plus 6)', () => {
+    expect(quantites(plage, 'papa')).toEqual({ longs: 0, courts: 4 });
+    expect(quantites({ ...ski, nuits: 1 }, 'papa')).toEqual({ longs: 2, courts: 0 });
+    expect(quantites({ ...ski, nuits: 20 }, 'papa')).toEqual({ longs: 6, courts: 0 });
+  });
+
+  it('avec une machine à laver, les jours comptés sont plafonnés à 7', () => {
+    expect(quantites({ ...ski, nuits: 20, machineALaver: true }, 'papa')).toEqual({ longs: 4, courts: 0 });
   });
 });

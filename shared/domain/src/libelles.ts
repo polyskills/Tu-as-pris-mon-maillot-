@@ -5,6 +5,7 @@ import {
   Destination,
   Habitude,
   Hebergement,
+  Motif,
   Sexe,
   TrancheAge,
   Transport,
@@ -56,8 +57,15 @@ export const ACTIVITES: Record<Activite, string> = {
   soiree: 'Soirées / resto chic',
   plongee: 'Plongée / snorkeling',
   peche: 'Pêche',
-  travail: 'Travail',
 };
+
+export const MOTIFS: Record<Motif, string> = {
+  vacances: '🏖️ Vacances',
+  travail: '💼 Travail',
+};
+
+/** Activités proposées pour un voyage de travail (les autres relèvent des loisirs). */
+export const ACTIVITES_TRAVAIL: Activite[] = ['sport', 'soiree'];
 
 export const HABITUDES: Record<Habitude, string> = {
   lunettes: 'Lunettes',

@@ -2,11 +2,16 @@
 
 import {
   ACTIVITES,
+  ACTIVITES_TRAVAIL,
   CLIMATS,
   DESTINATIONS,
   genererArticles,
   HEBERGEMENTS,
+  Motif,
+  motifDe,
+  MOTIFS,
   ParametresVoyage,
+  trancheAge,
   TRANSPORTS,
   Voyage,
   ZONES,
@@ -55,6 +60,7 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
     existant
       ? parametres(existant)
       : {
+          motif: 'vacances',
           nom: '',
           depart: aujourdhuiIso(),
           nuits: 7,
@@ -69,8 +75,33 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
         },
   );
   const maj = <K extends keyof ParametresVoyage>(cle: K, valeur: ParametresVoyage[K]) => setP({ ...p, [cle]: valeur });
+  const travail = motifDe(p) === 'travail';
+  /** Activités proposées : en travail, pas de loisirs. */
+  const activitesProposees = travail
+    ? (Object.fromEntries(ACTIVITES_TRAVAIL.map((a) => [a, ACTIVITES[a]])) as Record<
+        (typeof ACTIVITES_TRAVAIL)[number],
+        string
+      >)
+    : ACTIVITES;
 
-  const etapeValide = [p.nom.trim().length > 0, dateValide(p.depart), p.participants.length > 0, true, true];
+  /** En travail, on part seul : une seule personne (de préférence un adulte), sans activités de loisir. */
+  const changerMotif = (motif: Motif) => {
+    if (motif === 'vacances') return setP({ ...p, motif });
+    const adulte = profils.find(
+      (x) => p.participants.includes(x.id) && ['adulte', 'senior'].includes(trancheAge(x.anneeNaissance, p.depart)),
+    );
+    const seul = p.participants.length === 1 ? p.participants : [(adulte ?? profils[0])?.id].filter(Boolean);
+    setP({
+      ...p,
+      motif,
+      participants: seul as string[],
+      activites: p.activites.filter((a) => ACTIVITES_TRAVAIL.includes(a)),
+      ...(!existant && p.hebergement === 'location' && { hebergement: 'hotel' }),
+    });
+  };
+
+  const participantsValides = travail ? p.participants.length === 1 : p.participants.length > 0;
+  const etapeValide = [p.nom.trim().length > 0, dateValide(p.depart), participantsValides, true, true];
   const toutValide = etapeValide.every(Boolean);
 
   const valider = () => {
@@ -102,7 +133,7 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
   const apercu = genererArticles(p, profils, catalogue);
   const noms = profils.filter((x) => p.participants.includes(x.id)).map((x) => x.prenom);
   const lignes: [string, string, number][] = [
-    ['Voyage', p.nom || '—', 0],
+    ['Voyage', `${p.nom || '—'} · ${MOTIFS[motifDe(p)]}`, 0],
     ['Destination', `${liste(p.destinations, DESTINATIONS)} · ${CLIMATS[p.climat]} · ${ZONES[p.zone]}`, 0],
     ['Dates', dateValide(p.depart) ? `${dateLongue(p.depart)} · ${p.nuits} nuit${p.nuits > 1 ? 's' : ''}` : '—', 1],
     ['Participants', noms.join(', ') || '—', 2],
@@ -190,12 +221,22 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
             {section(
               0,
               <>
+                <Champ
+                  libelle="Motif"
+                  aide={
+                    travail
+                      ? 'Voyage seul, liste recentrée sur l’utile : ordinateur, tenue de travail, pas de loisirs.'
+                      : undefined
+                  }
+                >
+                  <ChoixUnique options={MOTIFS} valeur={motifDe(p)} onChange={changerMotif} />
+                </Champ>
                 <Champ libelle="Nom du voyage">
                   <input
                     className={classeSaisie}
                     value={p.nom}
                     onChange={(e) => maj('nom', e.target.value)}
-                    placeholder="Ex. : Biarritz juillet"
+                    placeholder={travail ? 'Ex. : Valence, salon pro' : 'Ex. : Biarritz juillet'}
                     autoFocus={!existant}
                   />
                 </Champ>
@@ -243,6 +284,9 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
             {section(
               2,
               <div className="grid gap-2 sm:grid-cols-2">
+                {travail && (
+                  <p className="text-sm text-discret sm:col-span-2">Voyage de travail : une seule personne part.</p>
+                )}
                 {profils.map((x) => {
                   const actif = p.participants.includes(x.id);
                   return (
@@ -253,7 +297,11 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
                       onClick={() =>
                         maj(
                           'participants',
-                          actif ? p.participants.filter((i) => i !== x.id) : [...p.participants, x.id],
+                          travail
+                            ? [x.id]
+                            : actif
+                              ? p.participants.filter((i) => i !== x.id)
+                              : [...p.participants, x.id],
                         )
                       }
                       className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
@@ -291,7 +339,7 @@ export function QuestionnaireVoyage({ existant }: { existant?: Voyage }) {
                   onChange={(v) => maj('machineALaver', v)}
                 />
                 <Champ libelle="Activités prévues">
-                  <ChoixPuces options={ACTIVITES} valeur={p.activites} onChange={(v) => maj('activites', v)} />
+                  <ChoixPuces options={activitesProposees} valeur={p.activites} onChange={(v) => maj('activites', v)} />
                 </Champ>
               </>,
             )}
