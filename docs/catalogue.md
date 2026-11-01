@@ -1,6 +1,6 @@
 # Catalogue des articles
 
-> Fichier généré automatiquement depuis `src/domain/catalogue.ts` par `npm run catalogue`. Ne pas le modifier à la main.
+> Fichier généré automatiquement depuis `shared/domain/src/catalogue.ts` par `npm run catalogue`. Ne pas le modifier à la main.
 
 **220 articles** : 165 mis d’office, 47 suggestions, 8 points de check-list voiture, dont 19 achetables sur place.
 

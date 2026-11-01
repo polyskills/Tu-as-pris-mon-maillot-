@@ -1,41 +1,24 @@
 {
   "name": "tu-as-pris-mon-maillot",
-  "version": "1.0.0",
-  "main": "expo-router/entry",
-  "dependencies": {
-    "@react-native-community/datetimepicker": "9.2.1",
-    "expo": "~58.0.19",
-    "expo-constants": "~58.0.13",
-    "expo-haptics": "~58.0.7",
-    "expo-linking": "~58.0.14",
-    "expo-router": "~58.0.26",
-    "expo-sqlite": "~58.0.14",
-    "expo-status-bar": "~58.0.4",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "react-native": "0.88.0",
-    "react-native-safe-area-context": "~5.10.1",
-    "react-native-screens": "~4.30.0",
-    "react-native-web": "~0.21.4",
-    "zustand": "^5.0.16"
+  "private": true,
+  "workspaces": [
+    "shared/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @maillot/web",
+    "build": "npm run build -w @maillot/web",
+    "start": "npm run start -w @maillot/web",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "catalogue": "npm run catalogue -w @maillot/domain"
   },
   "devDependencies": {
-    "@types/react": "~19.3.0",
-    "eslint": "^9.0.0",
-    "eslint-config-expo": "~58.0.4",
-    "tsx": "^4.23.15",
-    "typescript": "~6.0.3",
-    "vitest": "^5.0.5"
+    "prettier": "^3.6.2"
   },
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "lint": "expo lint",
-    "catalogue": "tsx scripts/catalogue-lisible.ts"
-  },
-  "private": true
+  "engines": {
+    "node": ">=22.13"
+  }
 }

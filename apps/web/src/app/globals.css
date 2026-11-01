@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+/* Identité : bleu océan pour les actions, jaune soleil pour les repères. Le thème suit celui de l'appareil. */
+:root {
+  --fond: #f5f6fa;
+  --carte: #ffffff;
+  --texte: #1b1f2a;
+  --discret: #6b7280;
+  --bordure: #e3e6ee;
+  --accent: #0e7c86;
+  --accent-texte: #ffffff;
+  --accent-clair: #ddf1f2;
+  --soleil: #f6b93b;
+  --soleil-clair: #fef3d7;
+  --succes: #2e9e5b;
+  --danger: #c2410c;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #0f1419;
+    --carte: #1a2027;
+    --texte: #e8ecf1;
+    --discret: #9aa4b2;
+    --bordure: #2a323c;
+    --accent: #2bb3be;
+    --accent-texte: #06222a;
+    --accent-clair: #123a3e;
+    --soleil: #f6c344;
+    --soleil-clair: #3a3020;
+    --succes: #3ccb7f;
+    --danger: #f97316;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-fond: var(--fond);
+  --color-carte: var(--carte);
+  --color-texte: var(--texte);
+  --color-discret: var(--discret);
+  --color-bordure: var(--bordure);
+  --color-accent: var(--accent);
+  --color-accent-texte: var(--accent-texte);
+  --color-accent-clair: var(--accent-clair);
+  --color-soleil: var(--soleil);
+  --color-soleil-clair: var(--soleil-clair);
+  --color-succes: var(--succes);
+  --color-danger: var(--danger);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background: var(--fond);
+  color: var(--texte);
+  -webkit-tap-highlight-color: transparent;
+}

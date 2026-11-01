@@ -1,0 +1,5 @@
+node_modules
+.next
+dist
+docs/catalogue.md
+package-lock.json
