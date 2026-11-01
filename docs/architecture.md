@@ -33,6 +33,7 @@ docs/             Décisions de tri, catalogue lisible (généré), architecture
   y compris hors ligne) et pourra tourner côté API sans modification.
 - **Tout accès aux données passera par l'API.** Aucune fonction propre à un hébergeur. Configuration par variables
   d'environnement. Évolutions de base versionnées (migrations Prisma).
+- **E-mails** : Mailpit (capture locale, deploy/mailpit.md) en DEV et pour l’instant en PROD ; vrai SMTP avant l’ouverture au public.
 - **Migration de la base** vers un MySQL géré (OVHcloud, Scaleway…) si le produit se développe : copie des données
   + changement de l'URL de connexion.
 

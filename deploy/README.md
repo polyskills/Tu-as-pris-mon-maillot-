@@ -46,26 +46,28 @@ SHARED_LINKS=""
 `INSTALL_CMD` reste vide (installation par défaut du kit : `pnpm install --frozen-lockfile`).
 `SHARED_LINKS` est vide : l'outil n'écrit aucun fichier. Puis : `sudo bin/26-apply-slug.sh voyage`.
 
-## 3. Secrets : `/var/www/voyage/shared/app.env`
+## 3. Secrets : `/var/www/voyage/shared/app.env` (idem `voyage-dev`)
 
 `PORT`, `HOST` et `DATABASE_URL` viennent du kit. À ajouter :
 
 ```bash
 PUBLIC_URL="https://voyage.adaptools.fr"
 BETTER_AUTH_SECRET="…"                      # openssl rand -base64 32 (différent en DEV et en PROD)
-SMTP_HOST="…"
-SMTP_PORT=587
-SMTP_USER="…"
-SMTP_PASSWORD="…"
+# E-mails : Mailpit pour l'instant (voir deploy/mailpit.md), vrai service SMTP avant l'ouverture au public
+SMTP_HOST="127.0.0.1"
+SMTP_PORT=1025
+SMTP_USER=""
+SMTP_PASSWORD=""
 MAIL_FROM="Tu as pris mon maillot <no-reply@adaptools.fr>"
 ```
-
-Uniquement sur **voyage-dev**, tant qu'aucun SMTP n'est configuré : `LIENS_DANS_LES_JOURNAUX="oui"` écrit le lien de
-connexion dans les journaux (`51-logs.sh voyage-dev`). **Jamais en PROD** : ce lien donne accès au compte.
 
 ```bash
 sudo -u app-voyage nano /var/www/voyage/shared/app.env
 ```
+
+Les e-mails de connexion se lisent dans Mailpit, par tunnel SSH : voir [mailpit.md](mailpit.md).
+Option de secours sans Mailpit, **DEV uniquement** : `LIENS_DANS_LES_JOURNAUX="oui"` écrit le lien dans les journaux.
+Jamais en PROD : ce lien donne accès au compte.
 
 ## 4. Déployer
 
